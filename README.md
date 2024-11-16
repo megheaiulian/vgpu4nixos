@@ -64,7 +64,7 @@ Manages the driver source. It can be used, for example, to download the driver f
 The module makes some assumptions about what file to retrieve and from where:
 - by default, the host tries to fetch the GRID .zip from the Nix store, the guest fetches the driver online
 - if `sha256` is specified, a .run file is always expected
-- `url = null` will force the driver to be fetched from the Nix repository (useful for guests)
+- `url = null` will force the driver to be fetched from the Nix store (useful for guests)
 - if `name` ends with the extension `.run`, then the .run file will be expected, the same with .zip (useful for guests)
 
 To calculate `sha256` (if you have the file locally, otherwise set it to `""` which will throw an error with the correct hash) you can use `nix-hash`:
