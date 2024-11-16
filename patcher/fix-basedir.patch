@@ -1,0 +1,10 @@
+--- a/patch.sh
++++ b/patch.sh
+@@ -1,6 +1,6 @@
+ #!/bin/bash
+ 
+-BASEDIR=$(dirname $0)
++BASEDIR=$(dirname $(dirname $0))
+ 
+ GNRL="NVIDIA-Linux-x86_64-535.129.03"
+ VGPU="NVIDIA-Linux-x86_64-535.129.03-vgpu-kvm"
