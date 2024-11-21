@@ -34,32 +34,48 @@ with lib;
       };
     };
   };
-  config = mkIf (builtins.hasAttr "vgpuPatcher" config.hardware.nvidia.package) {
-    systemd.services.nvidia-vgpud = {
-      description = "NVIDIA vGPU Daemon";
-      wants = [ "syslog.target" ];
-      wantedBy = [ "multi-user.target" ];
+  config = mkMerge [
+    (mkIf (builtins.hasAttr "vgpuPatcher" config.hardware.nvidia.package) {
+      systemd.services.nvidia-vgpud = {
+        description = "NVIDIA vGPU Daemon";
+        wants = [ "syslog.target" ];
+        wantedBy = [ "multi-user.target" ];
 
-      serviceConfig = {
-        Type = "forking";
-        ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud";
-        ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpud";
+        serviceConfig = {
+          Type = "forking";
+          ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud";
+          ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpud";
+        };
       };
-    };
-    systemd.services.nvidia-vgpu-mgr = {
-      description = "NVIDIA vGPU Manager Daemon";
-      wants = [ "syslog.target" ];
-      wantedBy = [ "multi-user.target" ];
+      systemd.services.nvidia-vgpu-mgr = {
+        description = "NVIDIA vGPU Manager Daemon";
+        wants = [ "syslog.target" ];
+        wantedBy = [ "multi-user.target" ];
 
-      serviceConfig = {
-        Type = "forking";
-        KillMode = "process";
-        ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr";
-        ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpu-mgr";
+        serviceConfig = {
+          Type = "forking";
+          KillMode = "process";
+          ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpu-mgr";
+          ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpu-mgr";
+        };
       };
-    };
 
-    environment.systemPackages = with config.hardware.nvidia; lib.optional (vgpu.patcher.enablePatcherCmd) package.vgpuPatcher;
-    environment.etc."nvidia/vgpu/vgpuConfig.xml".source = config.hardware.nvidia.package + /vgpuConfig.xml;
-  };
+      environment.systemPackages = with config.hardware.nvidia; lib.optional (vgpu.patcher.enablePatcherCmd) package.vgpuPatcher;
+      environment.etc."nvidia/vgpu/vgpuConfig.xml".source = config.hardware.nvidia.package + /vgpuConfig.xml;
+    })
+
+    # The absence of the "nvidia" element in the config.services.xserver.videoDrivers option (to use non-merged drivers in our case)
+    # will result in the driver not being installed properly without this fix
+    (mkIf ((builtins.hasAttr "vgpuPatcher" config.hardware.nvidia.package) && !(lib.elem "nvidia" config.services.xserver.videoDrivers)) {
+      boot = {
+        blacklistedKernelModules = [ "nouveau" "nvidiafb" ];
+        extraModulePackages = [ config.hardware.nvidia.package.bin ]; # TODO: nvidia-open support
+        kernelModules = [ "nvidia" "nvidia-vgpu-vfio" ];
+      };
+      environment.systemPackages = [ config.hardware.nvidia.package.bin ];
+
+      # taken from nixpkgs
+      systemd.tmpfiles.rules = lib.mkIf config.virtualisation.docker.enableNvidia [ "L+ /run/nvidia-docker/bin - - - - ${config.hardware.nvidia.package.bin}/origBin" ];
+    })
+  ];
 }
