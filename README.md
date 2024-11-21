@@ -5,7 +5,7 @@
 NixOS module to support NVIDIA vGPU drivers (including GRID guest drivers). Also supports [vGPU-Unlock-patcher](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher) for vGPU unlock
 
 ## Installation
-Currently, only vGPU release 16.2 is supported (more versions are coming soon). Flakes must be enabled
+Currently vGPU releases 16.5, 17.3 (latest with unlock support) and 16.2 are supported. Flakes must be enabled
 
 Add a new input to your `flake.nix`:
 ```nix
@@ -41,7 +41,7 @@ Now more packages will be available in `config.boot.kernelPackages.nvidiaPackage
 }
 ```
 
-After that (during the first rebuild), the module will require you to add the GRID .zip archive (for example, `NVIDIA-GRID-Linux-KVM-535.129.03-537.70.zip`) to the Nix repository on the host. This does not apply to the guest
+After that (during the first rebuild), the module will require you to add the GRID .zip archive (it must be `Linux-KVM` one, for example `NVIDIA-GRID-Linux-KVM-535.129.03-537.70.zip`) to the Nix store on the host. This does not apply to the guest
 
 ## Configuration
 After installation, new options should appear in `hardware.nvidia.vgpu`
@@ -49,10 +49,14 @@ After installation, new options should appear in `hardware.nvidia.vgpu`
 ### `hardware.nvidia.vgpu.patcher`
 VUP-related options. Please read the repository's [README](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher/blob/535.129/README.md) if you don't know how to use it. Most likely, you will only need to specify `hardware.nvidia.vgpu.patcher.enable = true` and in some cases `hardware.nvidia.vgpu.patcher.copyVGPUProfiles`
 
+> [!NOTE]
+> The target for the vGPU patcher is determined automatically. For a guest, it will always be `grid`. For the host, if `services.xserver.videoDrivers = [ "nvidia" ];` is specified, it will be `general-merge` (merged), otherwise `vgpu-kvm`.
+
 #### Available options
 - `hardware.nvidia.vgpu.patcher.enable` (bool) - enable VUP
 - `hardware.nvidia.vgpu.patcher.options.doNotForceGPLLicense` (bool)
 	- if set to `false`, then the `--enable-nvidia-gpl-for-experimenting --force-nvidia-gpl-I-know-it-is-wrong` options will be applied, which allows using the driver with slightly newer kernels
+- `hardware.nvidia.vgpu.patcher.options.remapP40ProfilesToV100D` (bool; only for host) - applies the `--remap-p2v` option. Only for 17.x releases
 - `hardware.nvidia.vgpu.patcher.options.extra` (list of strings) - additional `patch.sh` command options
 - `hardware.nvidia.vgpu.patcher.copyVGPUProfiles` (attrset; only for host) - additional `vcfgclone` lines (see VUP's README)
 	- For example, `{"AAAA:BBBB" = "CCCC:DDDD"}` is the same as `vcfgclone ${TARGET}/vgpuConfig.xml 0xCCCC 0xDDDD 0xAAAA 0xBBBB`
@@ -69,8 +73,7 @@ The module makes some assumptions about what file to retrieve and from where:
 
 To calculate `sha256` (if you have the file locally, otherwise set it to `""` which will throw an error with the correct hash) you can use `nix-hash`:
 ```
-$ nix-hash --flat --base64 --type sha256 /path/to/file.zip
-tFgDf7ZSIZRkvImO+9YglrLimGJMZ/fz25gjUT0TfDo=
+nix-hash --flat --base64 --type sha256 /path/to/file.zip
 ```
 
 #### Available options
@@ -80,5 +83,5 @@ tFgDf7ZSIZRkvImO+9YglrLimGJMZ/fz25gjUT0TfDo=
 - `hardware.nvidia.vgpu.driverSource.curlOptsList` (list of string) - a list of arguments to pass to `curl`
 	- For example, `["-u" "admin:some nice password"]`
 
-## Attribution
+## Credits
 Some files from the `nvidia-x11` package in Nixpkgs are used. Nixpkgs is distributed under [the MIT license](https://github.com/NixOS/nixpkgs/blob/master/COPYING)
