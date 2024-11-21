@@ -6,15 +6,14 @@ with lib;
   options = {
     hardware.nvidia.vgpu = {
       patcher = {
-        # TODO: 17.x
-        /* options.remapP40ProfilesToV100D = mkOption {
+        options.remapP40ProfilesToV100D = mkOption {
           type = types.bool;
           default = false;
           description = ''
             Allows Pascal GPUs which use profiles from P40 to use latest guest drivers. Otherwise you're stuck with 16.x drivers. Not
             required for Maxwell GPUs. Only for 17.x releases.
-        '';
-        }; */
+          '';
+        };
         copyVGPUProfiles = mkOption {
           default = {};
           type = types.attrs;
@@ -42,7 +41,7 @@ with lib;
         wantedBy = [ "multi-user.target" ];
 
         serviceConfig = {
-          Type = "forking";
+          Type = "oneshot";
           ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud";
           ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpud";
         };
@@ -51,6 +50,8 @@ with lib;
         description = "NVIDIA vGPU Manager Daemon";
         wants = [ "syslog.target" ];
         wantedBy = [ "multi-user.target" ];
+        requires = [ "nvidia-vgpud.service" ];
+        after = [ "nvidia-vgpud.service" ];
 
         serviceConfig = {
           Type = "forking";

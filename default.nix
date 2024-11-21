@@ -49,11 +49,11 @@ let
     patcherArgs = with config.hardware.nvidia.vgpu.patcher.options;
       builtins.concatStringsSep " " (optional (!doNotForceGPLLicense)
       "--enable-nvidia-gpl-for-experimenting --force-nvidia-gpl-I-know-it-is-wrong"
-      # TODO: 17.x
+      # TODO: nvidia-open support
       /*
       ++ optional (!guest && !doNotPatchNvidiaOpen) "--nvoss"
-      ++ optional (!guest && remapP40ProfilesToV100D) "--remap-p2v"
       */
+      ++ optional (!guest && remapP40ProfilesToV100D) "--remap-p2v"
       ++ extra ++ [ (if merged then "general-merge" else if guest then "grid" else "vgpu-kvm") ]);
   in mapAttrs' (version: data:
     nameValuePair (makeName version) (makePackage version data)) (import ./versions.nix);

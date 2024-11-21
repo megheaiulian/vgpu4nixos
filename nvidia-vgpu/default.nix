@@ -14,7 +14,7 @@
 , vgpuPatcher ? null
 , patcherArgs ? ""
 , gridVersion
-, windowsGuest # only for .zip name though
+, zipFilename
 , linuxSha256 # Linux guest driver SHA256
 , useGLVND ? true
 , useProfiles ? true
@@ -71,10 +71,8 @@ let
   getDriver = {name ? "", url ? "", sha256 ? null, zipSha256, linuxSha256, gridVersion, curlOptsList ? []}@args: let
       sha256 = if args.sha256 != null then args.sha256 else if guest && !(lib.hasSuffix args.name ".zip") then linuxSha256 else zipSha256;
       name = if args.name != "" then args.name else
-        if !guest && sha256 != args.sha256 then
-          "NVIDIA-GRID-Linux-KVM-${version}-${windowsGuest}.zip"
-        else
-          "NVIDIA-Linux-x86_64-${version}-${if guest then "grid" else "vgpu-kvm"}.run";
+        if !guest && sha256 != args.sha256 then zipFilename
+        else "NVIDIA-Linux-x86_64-${version}-${if guest then "grid" else "vgpu-kvm"}.run";
       url = if args.url != "" then args.url else if guest && args.name == "" && args.sha256 == null
         then "https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU${gridVersion}/${name}" else null;
     in
