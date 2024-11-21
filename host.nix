@@ -41,7 +41,7 @@ with lib;
         wantedBy = [ "multi-user.target" ];
 
         serviceConfig = {
-          Type = "oneshot";
+          Type = "forking";
           ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-vgpud";
           ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpud";
         };

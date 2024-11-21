@@ -16,22 +16,27 @@
     windowsGuestFilename = "552.74_grid_win10_win11_server2022_dch_64bit_international.exe";
     zipFilename = "NVIDIA-GRID-Linux-KVM-550.90.05-550.90.07-552.74.zip";
   };
-#   "16.7" = {
-#     # Latest 16.x release
-#     version = "535.183.04";
-#     sha256 = "";
-#     openSha256 = null; # nvidia-open not supported
-#     settingsSha256 = "";
-#     persistencedSha256 = "";
-#     patcherSha256 = "";
-#     patcherRev = "59c75f98baf4261cf42922ba2af5d413f56f0621";
-#     linuxGuest = "535.183.06";
-#     windowsGuest = "538.78";
-#   };
+  "16.5" = {
+    version = "535.161.05";
+    sha256 = "sha256-uXBzzFcDfim1z9SOrZ4hz0iGCElEdN7l+rmXDbZ6ugs=";
+    openSha256 = null;
+    settingsSha256 = "sha256-qKiKSNMUM8UftedmXtidVbu9fOkxzIXzBRIZNb497OU=";
+    persistencedSha256 = "sha256-1kblNpRPlZ446HpKF1yMSK36z0QDQpMtu6HCdRdqwo8=";
+
+    patcherSha256 = "sha256-IUBK+ni+yy/IfjuGM++4aOLQW5vjNiufOPfXOIXCDeI=";
+    patcherRev = "59c75f98baf4261cf42922ba2af5d413f56f0621";
+    generalSha256 = "sha256-7cUn8dz6AhKjv4FevzAtRe+WY4NKQeEahR3TjaFZqM0=";
+    generalVersion = "535.161.07";
+    linuxSha256 = "sha256-5K1hmS+Oax6pGdS8pBthVQferAbVXAHfaLbd0fzytCA=";
+    linuxGuest = "535.161.08";
+    windowsSha256 = "sha256-GHD2kVo1awyyZZvu2ivphrXo2XhanVB9rU2mwmfjXE4=";
+    windowsGuestFilename = "538.46_grid_win10_win11_server2019_server2022_dch_64bit_international.exe";
+    zipFilename = "NVIDIA-GRID-Linux-KVM-535.161.05-535.161.08-538.46.zip";
+  };
   "16.2" = {
     version = "535.129.03";
     sha256 = "sha256-tFgDf7ZSIZRkvImO+9YglrLimGJMZ/fz25gjUT0TfDo=";
-    openSha256 = null; # nvidia-open not supported
+    openSha256 = null;
     settingsSha256 = "sha256-QKN/gLGlT+/hAdYKlkIjZTgvubzQTt4/ki5Y+2Zj3pk=";
     persistencedSha256 = "sha256-FRMqY5uAJzq3o+YdM2Mdjj8Df6/cuUUAnh52Ne4koME=";
 
