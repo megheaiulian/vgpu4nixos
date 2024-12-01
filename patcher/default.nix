@@ -4,8 +4,8 @@
   linuxSha256, linuxGuest,
   windowsSha256, windowsGuestFilename,
   gridVersion, extraVGPUProfiles,
-  generalUrl ? "https://download.nvidia.com/XFree86/Linux-x86_64/",
-  vgpuUrl ? "https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU"
+  generalUrl ? "https://download.nvidia.com/XFree86/Linux-x86_64/${generalVersion}",
+  vgpuUrl ? "https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU${gridVersion}"
   }:
 
 let
@@ -48,18 +48,18 @@ pkgs.stdenv.mkDerivation {
   ] ++ lib.optionals (merged || fetchGuests) [
     # General driver
     (pkgs.fetchurl {
-      url = "${generalUrl}${generalVersion}/NVIDIA-Linux-x86_64-${generalVersion}.run";
+      url = "${generalUrl}/NVIDIA-Linux-x86_64-${generalVersion}.run";
       sha256 = generalSha256;
     })
   ] ++ lib.optionals (fetchGuests && !isVGPUInZip) [
     # Windows guest driver
     (pkgs.fetchurl {
-      url = "${vgpuUrl}${gridVersion}/${windowsGuestFilename}";
+      url = "${vgpuUrl}/${windowsGuestFilename}";
       sha256 = windowsSha256;
     })
     # Linux guest driver
     (pkgs.fetchurl {
-      url = "${vgpuUrl}${gridVersion}/NVIDIA-Linux-x86_64-${linuxGuest}-grid.run";
+      url = "${vgpuUrl}/NVIDIA-Linux-x86_64-${linuxGuest}-grid.run";
       sha256 = linuxSha256;
     })
   ]);

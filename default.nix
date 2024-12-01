@@ -44,6 +44,7 @@ let
       in generic kernel (args'
         // { inherit (args) linuxSha256; inherit gridVersion merged;
           settingsVersion = args.generalVersion; persistencedVersion = args.generalVersion; }
+        // (optionalAttrs guest { version = args.linuxGuest; })
         // (optionalAttrs config.hardware.nvidia.vgpu.patcher.enable { inherit vgpuPatcher patcherArgs; }));
 
     patcherArgs = with config.hardware.nvidia.vgpu.patcher.options;

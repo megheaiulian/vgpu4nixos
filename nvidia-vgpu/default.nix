@@ -69,7 +69,7 @@ let
     '';
   });
   getDriver = {name ? "", url ? "", sha256 ? null, zipSha256, linuxSha256, gridVersion, curlOptsList ? []}@args: let
-      sha256 = if args.sha256 != null then args.sha256 else if guest && !(lib.hasSuffix args.name ".zip") then linuxSha256 else zipSha256;
+      sha256 = if args.sha256 != null then args.sha256 else if guest && !(lib.hasSuffix ".zip" args.name) then linuxSha256 else zipSha256;
       name = if args.name != "" then args.name else
         if !guest && sha256 != args.sha256 then zipFilename
         else "NVIDIA-Linux-x86_64-${version}-${if guest then "grid" else "vgpu-kvm"}.run";
