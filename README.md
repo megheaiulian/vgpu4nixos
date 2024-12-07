@@ -1,5 +1,6 @@
+
 # nvidia-vgpu-nixos
-> [!WARNING]
+> [!NOTE]
 > Not to be confused with [nixos-nvidia-vgpu](https://github.com/Yeshey/nixos-nvidia-vgpu) by Yeshey
 
 NixOS module to support NVIDIA vGPU drivers (including GRID guest drivers). Also supports [vGPU-Unlock-patcher](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher) for vGPU unlock
@@ -50,7 +51,7 @@ After installation, new options should appear in `hardware.nvidia.vgpu`
 VUP-related options. Please read the repository's [README](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher/blob/535.129/README.md) if you don't know how to use it. Most likely, you will only need to specify `hardware.nvidia.vgpu.patcher.enable = true` and in some cases `hardware.nvidia.vgpu.patcher.copyVGPUProfiles`
 
 > [!NOTE]
-> The target for the vGPU patcher is determined automatically. For a guest, it will always be `grid`. For the host, if `services.xserver.videoDrivers = [ "nvidia" ];` is specified, it will be `general-merge` (merged), otherwise `vgpu-kvm`.
+> The target for the vGPU patcher is determined automatically. For a guest, it will always be `grid`. For the host, if `services.xserver.videoDrivers = ["nvidia"];` is specified, it will be `general-merge` (merged), otherwise `vgpu-kvm`.
 
 #### Available options
 - `hardware.nvidia.vgpu.patcher.enable` (bool) - enable VUP
@@ -61,6 +62,26 @@ VUP-related options. Please read the repository's [README](https://github.com/VG
 - `hardware.nvidia.vgpu.patcher.copyVGPUProfiles` (attrset; only for host) - additional `vcfgclone` lines (see VUP's README)
 	- For example, `{"AAAA:BBBB" = "CCCC:DDDD"}` is the same as `vcfgclone ${TARGET}/vgpuConfig.xml 0xCCCC 0xDDDD 0xAAAA 0xBBBB`
 - `hardware.nvidia.vgpu.patcher.enablePatcherCmd` (bool; only for host) - add a patcher to system packages (which will be available as `nvidia-vup`) for convenience
+- `hardware.nvidia.vgpu.patcher.profileOverrides` (only for host) - custom properties for vGPU profiles. Replace `*` in the following options with your profile ID (`"333"` in case of `nvidia-333` also referred to as `GeForce RTX 2070-3`)
+	- `profileOverrides.*.vramAllocation` (integer) - vRAM allocation in megabytes
+	- `profileOverrides.*.heads` (integer) - the maximum number of virtual monitors for one VM
+	- `profileOverrides.*.enableCuda` (bool)
+	- `profileOverrides.*.display.width` (integer) - maximum display width in pixels
+	- `profileOverrides.*.display.height` (integer) - maximum display height in pixels
+	- `profileOverrides.*.framerateLimit` (integer) - limits FPS to a certain value (`0` to disable limit)
+	- `profileOverrides.*.xmlConfig` (attrset) - additional configuration
+	- An example of a profile override:
+		```nix
+		hardware.nvidia.vgpu.patcher.profileOverrides = {
+		  "333" = {
+		    vramAllocation = 3584; # 3.5GiB
+		    heads = 1;
+		    display.width = 1920;
+		    display.height = 1080;
+		    framerateLimit = 144;
+		  };
+		};
+		```
 
 ### `hardware.nvidia.vgpu.driverSource`
 Manages the driver source. It can be used, for example, to download the driver from your HTTP(s) server. You can use a .run or GRID .zip file. You can also use a previously patched file. 
@@ -84,4 +105,4 @@ nix-hash --flat --base64 --type sha256 /path/to/file.zip
 	- For example, `["-u" "admin:some nice password"]`
 
 ## Credits
-Some files from the `nvidia-x11` package in Nixpkgs are used. Nixpkgs is distributed under [the MIT license](https://github.com/NixOS/nixpkgs/blob/master/COPYING)
+Some files from the `nvidia-x11` package in Nixpkgs are used. Nixpkgs is distributed under the [MIT license](https://github.com/NixOS/nixpkgs/blob/master/COPYING)
