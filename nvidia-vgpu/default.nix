@@ -39,7 +39,7 @@
 , broken ? false
 , brokenOpen ? broken
 
-, inputs
+, nixpkgs
 , kernel ? config.boot.kernelPackages.kernel
 , pkgs
 , lib
@@ -89,9 +89,6 @@ let
         (requireNvidiaFile { inherit name sha256; })
       else
         (pkgs.fetchurl { inherit name url sha256 curlOptsList; });
-
-  getNixpkgsFile = path: (if builtins.hasAttr "nixpkgs" inputs
-    then inputs.nixpkgs else <nixpkgs>) + path;
 
   # TODO: use graphics-related libraries for merged drivers only
   libPathFor = pkg: lib.makeLibraryPath (with pkg; [
@@ -203,7 +200,7 @@ let
         settings =
           if useSettings then
             (if settings32Bit then pkgs.pkgsi686Linux.callPackage else pkgs.callPackage)
-              (import (getNixpkgsFile "/pkgs/os-specific/linux/nvidia-x11/settings.nix") self settingsSha256)
+              (import (nixpkgs + "/pkgs/os-specific/linux/nvidia-x11/settings.nix") self settingsSha256)
               {
                 withGtk2 = preferGtk2;
                 withGtk3 = !preferGtk2;
@@ -213,7 +210,7 @@ let
           if usePersistenced then
             mapNullable
               (hash: pkgs.callPackage
-              (import (getNixpkgsFile "/pkgs/os-specific/linux/nvidia-x11/persistenced.nix") self hash) {
+              (import (nixpkgs + "/pkgs/os-specific/linux/nvidia-x11/persistenced.nix") self hash) {
                 fetchFromGitHub = fetchFromGithubOrNvidia;
               })
               persistencedSha256

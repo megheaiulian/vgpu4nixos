@@ -4,8 +4,12 @@
 with lib;
 
 let
-  generic = kernel: args: import ./nvidia-vgpu (args //
-    { inherit pkgs lib config inputs kernel guest; });
+  callPackage = package: args: (if builtins.hasAttr "nixpkgs" inputs then
+    (inputs.nixpkgs.legacyPackages."x86_64-linux")
+  else
+    (import <nixpkgs> {})).callPackage package args;
+  generic = kernel: args: callPackage ./nvidia-vgpu (args //
+    { inherit config kernel guest; nixpkgs = (inputs.nixpkgs or <nixpkgs>); });
 
   tryGetPatcherConf = option: default:
     if (builtins.hasAttr option config.hardware.nvidia.vgpu.patcher)
@@ -28,7 +32,7 @@ let
         extraVGPUProfiles = tryGetPatcherConf "copyVGPUProfiles" {};
       };
     in
-    vgpuDriver: pkgs.callPackage ./patcher (args' // { inherit vgpuDriver merged; });
+    vgpuDriver: callPackage ./patcher (args' // { inherit vgpuDriver merged; });
 
   getPackages = kernel:
   let
