@@ -1,4 +1,5 @@
 
+
 # nvidia-vgpu-nixos
 > [!NOTE]
 > Not to be confused with [nixos-nvidia-vgpu](https://github.com/Yeshey/nixos-nvidia-vgpu) by Yeshey
@@ -6,9 +7,10 @@
 NixOS module to support NVIDIA vGPU drivers (including GRID guest drivers). Also supports [vGPU-Unlock-patcher](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher) for vGPU unlock
 
 ## Installation
-Currently vGPU releases 16.5, 17.3 (latest with unlock support) and 16.2 are supported. Flakes must be enabled
+Currently vGPU releases 16.5, 17.3 (latest with unlock support) and 16.2 are supported
 
-Add a new input to your `flake.nix`:
+### With Flakes
+flake.nix:
 ```nix
 {
   inputs = {
@@ -20,9 +22,9 @@ Add a new input to your `flake.nix`:
     nixosConfigurations.mrzenc = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [
+        ./configuration.nix
         /* ... */
         nvidia-vgpu-nixos.nixosModules.host # Use nixosModules.guest for VMs
-        ./configuration.nix
       ];
       /* ... */
     };
@@ -30,6 +32,25 @@ Add a new input to your `flake.nix`:
 }
 ```
 
+### Without Flakes
+configuration.nix:
+```nix
+{ pkgs, lib, config }:
+{
+  imports = [
+    ./hardware-configuration.nix
+    /* ... */
+    (import (builtins.fetchGit {
+      url = "https://github.com/mrzenc/nvidia-vgpu-nixos.git";
+      # Pin to specific commit (example value)
+      # rev = "b6ddaeb51b1575c6c8ec05b117c3a8bfa3539e92";
+    }) { guest = false; }) # Use { guest = true; } for VMs
+  ];
+
+  /* ... */
+}
+```
+---
 Now more packages will be available in `config.boot.kernelPackages.nvidiaPackages`, for example `vgpu_16_2` for the host or `grid_16_2` for the guest. Specify the package in the `configuration.nix` file as follows:
 ```nix
 { config, pkgs, lib, ... }:
@@ -62,26 +83,30 @@ VUP-related options. Please read the repository's [README](https://github.com/VG
 - `hardware.nvidia.vgpu.patcher.copyVGPUProfiles` (attrset; only for host) - additional `vcfgclone` lines (see VUP's README)
 	- For example, `{"AAAA:BBBB" = "CCCC:DDDD"}` is the same as `vcfgclone ${TARGET}/vgpuConfig.xml 0xCCCC 0xDDDD 0xAAAA 0xBBBB`
 - `hardware.nvidia.vgpu.patcher.enablePatcherCmd` (bool; only for host) - add a patcher to system packages (which will be available as `nvidia-vup`) for convenience
-- `hardware.nvidia.vgpu.patcher.profileOverrides` (only for host) - custom properties for vGPU profiles. Replace `*` in the following options with your profile ID (`"333"` in case of `nvidia-333` also referred to as `GeForce RTX 2070-3`)
-	- `profileOverrides.*.vramAllocation` (integer) - vRAM allocation in megabytes
-	- `profileOverrides.*.heads` (integer) - the maximum number of virtual monitors for one VM
-	- `profileOverrides.*.enableCuda` (bool)
-	- `profileOverrides.*.display.width` (integer) - maximum display width in pixels
-	- `profileOverrides.*.display.height` (integer) - maximum display height in pixels
-	- `profileOverrides.*.framerateLimit` (integer) - limits FPS to a certain value (`0` to disable limit)
-	- `profileOverrides.*.xmlConfig` (attrset) - additional configuration
-	- An example of a profile override:
-		```nix
-		hardware.nvidia.vgpu.patcher.profileOverrides = {
-		  "333" = {
-		    vramAllocation = 3584; # 3.5GiB
-		    heads = 1;
-		    display.width = 1920;
-		    display.height = 1080;
-		    framerateLimit = 144;
-		  };
-		};
-		```
+- `hardware.nvidia.vgpu.patcher.profileOverrides` (only for host) - custom properties for vGPU profiles
+
+#### Profile overrides
+Replace `*` in the following options with your profile ID (`"333"` in case of `nvidia-333`, also referred to as `GeForce RTX 2070-3`). Multiple overrides can be specified
+- `profileOverrides.*.vramAllocation` (integer) - vRAM allocation in megabytes
+- `profileOverrides.*.heads` (integer) - the maximum number of virtual monitors for one VM
+- `profileOverrides.*.enableCuda` (bool)
+- `profileOverrides.*.display.width` (integer) - maximum display width in pixels
+- `profileOverrides.*.display.height` (integer) - maximum display height in pixels
+- `profileOverrides.*.framerateLimit` (integer) - limits FPS to a certain value (`0` to disable limit)
+- `profileOverrides.*.xmlConfig` (attrset) - additional configuration
+
+An example of a profile override:
+```nix
+hardware.nvidia.vgpu.patcher.profileOverrides = {
+  "333" = {
+    vramAllocation = 3584; # 3.5GiB
+    heads = 1;
+    display.width = 1920;
+    display.height = 1080;
+    framerateLimit = 144;
+  };
+};
+```
 
 ### `hardware.nvidia.vgpu.driverSource`
 Manages the driver source. It can be used, for example, to download the driver from your HTTP(s) server. You can use a .run or GRID .zip file. You can also use a previously patched file. 
@@ -101,7 +126,7 @@ nix-hash --flat --base64 --type sha256 /path/to/file.zip
 - `hardware.nvidia.vgpu.driverSource.name` (string) - driver filename
 - `hardware.nvidia.vgpu.driverSource.url` (string)
 - `hardware.nvidia.vgpu.driverSource.sha256` (string)
-- `hardware.nvidia.vgpu.driverSource.curlOptsList` (list of string) - a list of arguments to pass to `curl`
+- `hardware.nvidia.vgpu.driverSource.curlOptsList` (list of strings) - a list of arguments to pass to `curl`
 	- For example, `["-u" "admin:some nice password"]`
 
 ## Credits
