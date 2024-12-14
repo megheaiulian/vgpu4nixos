@@ -18,10 +18,8 @@ unpackFile() {
         sh $src -x || unpackManually
     else
         # TODO: use fixupPhase for patching?
-        mkdir $TMPDIR/nvidia-vgpu
-        (cd $TMPDIR/nvidia-vgpu && $patcher/bin/nvidia-vup $patcherArgs)
-        cp -r $TMPDIR/nvidia-vgpu/NVIDIA-Linux-x86_64-*-patched ./
-        rm -r $TMPDIR/nvidia-vgpu
+        $patcher/bin/nvidia-vup $patcherArgs
+        sourceRoot=$(ls -d NVIDIA-Linux-x86_64-*-patched)
     fi
 }
 
@@ -154,7 +152,6 @@ installPhase() {
         install -Dm444 -t $out/lib/ nvoptix.bin
     fi
 
-    # Later it will be symlinked to /etc/nvidia/vgpu/vgpuConfig.xml
     if [ -e vgpuConfig.xml ]; then
         install -Dm644 vgpuConfig.xml $out/vgpuConfig.xml
     fi
@@ -198,7 +195,7 @@ installPhase() {
         install -Dm644 -t $firmware/lib/firmware/nvidia/$version firmware/gsp*.bin
     fi
 
-    # All libs except GUI and vGPU-only are installed now, so fixup them.
+    # All libs except GUI-only are installed now, so fixup them.
     for libname in $(find "$out/lib/" $(test -n "$lib32" && echo "$lib32/lib/") $(test -n "$bin" && echo "$bin/lib/") -name '*.so.*')
     do
       # I'm lazy to differentiate needed libs per-library, as the closure is the same.
@@ -254,13 +251,13 @@ installPhase() {
 EOF
         chmod 644 $bin/share/dbus-1/system.d/nvidia-grid.conf
 
-        # Install the programs and services.
+        # Install the programs.
         for i in nvidia-cuda-mps-control nvidia-cuda-mps-server nvidia-smi nvidia-debugdump nvidia-powerd \
             nvidia-gridd nvidia-topologyd nvidia-vgpud nvidia-vgpu-mgr; do
             if [ -e "$i" ]; then
+                install -Dm755 $i $bin/bin/$i
                 # unmodified binary backup for mounting in containers
                 install -Dm755 $i $bin/origBin/$i
-                install -Dm755 $i $bin/bin/$i
                 if [ $i == nvidia-vgpud ]; then
                     # make nvidia-vgpud look for vgpuConfig.xml in /etc/nvidia/vgpu
                     bbe \

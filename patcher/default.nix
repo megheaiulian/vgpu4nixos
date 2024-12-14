@@ -1,4 +1,4 @@
-{ pkgs, lib, version, rev, sha256, vgpuDriver,
+{ pkgs, lib, version ? "custom", rev, sha256, vgpuDriver,
   merged ? false, fetchGuests ? false,
   generalSha256, generalVersion,
   linuxSha256, linuxGuest,
