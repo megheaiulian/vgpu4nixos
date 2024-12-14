@@ -48,9 +48,6 @@ let
       url = if args.url != "" then args.url else if guest && args.name == "" && args.sha256 == null
         then "https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU${gridVersion}/${name}" else null;
     in
-      # wasn't really sure where I can put that to not cause infinite recursion
-      lib.throwIfNot (pkgs.stdenv.hostPlatform.system == "x86_64-linux") "nvidia-vgpu only supports platform x86_64-linux"
-
       lib.throwIf ((lib.hasSuffix ".zip" name) && sha256 != zipSha256) ''
         The .run file was expected as the source of the NVIDIA vGPU driver due to a overriden hash, got a .zip GRID archive instead
       ''
@@ -171,11 +168,41 @@ in
     };
   };
   config = {
+    assertions = [
+      {
+        assertion = (pkgs.stdenv.hostPlatform.system == "x86_64-linux");
+        message = "nvidia-vgpu only supports platform x86_64-linux";
+      }
+      {
+        assertion = (merged -> vgpuCfg.patcher.enable);
+        message = ''
+          vGPU-Unlock-patcher must be enabled to make merged NVIDIA vGPU/GRID driver
+          (did you accidentally set `services.xserver.videoDrivers = ["nvidia"]`?)
+        '';
+      }
+      {
+        assertion = (config.hardware.nvidia.package.vgpuPatcher == null -> !vgpuCfg.patcher.enable);
+        message = "vGPU-Unlock-patcher is not supported for vGPU version ${config.hardware.nvidia.package.version}";
+      }
+    ];
     # Add our packages to nvidiaPackages
     nixpkgs.overlays = [
       (overlayNvidiaPackages {
         inherit mkVgpuDriver mkVgpuPatcher;
 
+        "${pref}_17_4" = mkVgpuDriver {
+          version = "550.127.06";
+          sha256 = "sha256-w5Oow0G8R5QDckNw+eyfeaQm98JkzsgL0tc9HIQhE/g=";
+          guestVersion = "550.127.05";
+          guestSha256 = "sha256-gV9T6UdjhM3fnzITfCmxZDYdNoYUeZ5Ocf9qjbrQWhc=";
+          openSha256 = null; # TODO: nvidia-open support
+          generalVersion = "550.127.05";
+          settingsSha256 = "sha256-cUSOTsueqkqYq3Z4/KEnLpTJAryML4Tk7jco/ONsvyg=";
+          persistencedSha256 = "sha256-8nowXrL6CRB3/YcoG1iWeD4OCYbsYKOOPE374qaa4sY=";
+          gridVersion = "17.4";
+          zipFilename = "NVIDIA-GRID-Linux-KVM-550.127.06-550.127.05-553.24.zip";
+          vgpuPatcher = null;
+        };
         "${pref}_17_3" = mkVgpuDriver {
           version = "550.90.05";
           sha256 = "sha256-ydNOnbhbqkO2gVaUQXsIWCZsbjw0NMEYl9iV0T01OX0=";
@@ -199,6 +226,19 @@ in
             windowsSha256 = "sha256-UU+jbwlfg9xCie8IjPASb/gWalcEzAwzy+VAmgr0868=";
             gridVersion = "17.3";
           };
+        };
+        "${pref}_16_8" = mkVgpuDriver {
+          version = "535.216.01";
+          sha256 = "sha256-7C5cELcb2akv8Vpg+or2317RUK2GOW4LXvrtHoYOi/4=";
+          guestVersion = "535.216.01";
+          guestSha256 = "sha256-47s58S1X72lmLq8jA+n24lDLY1fZQKIGtzfKLG+cXII=";
+          openSha256 = null; # TODO: nvidia-open support
+          generalVersion = "535.216.01";
+          settingsSha256 = "sha256-9PgaYJbP1s7hmKCYmkuLQ58nkTruhFdHAs4W84KQVME=";
+          persistencedSha256 = "sha256-ckF/BgDA6xSFqFk07rn3HqXuR0iGfwA4PRxpP38QZgw=";
+          gridVersion = "16.8";
+          zipFilename = "NVIDIA-GRID-Linux-KVM-535.216.01-538.95.zip";
+          vgpuPatcher = null;
         };
         "${pref}_16_5" = mkVgpuDriver {
           version = "535.161.05";

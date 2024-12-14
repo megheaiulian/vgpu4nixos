@@ -266,7 +266,7 @@ EOF
 
         # Install the programs.
         for i in nvidia-cuda-mps-control nvidia-cuda-mps-server nvidia-smi nvidia-debugdump nvidia-powerd \
-            nvidia-gridd nvidia-topologyd nvidia-vgpud nvidia-vgpu-mgr; do
+            nvidia-gridd nvidia-topologyd nvidia-vgpud nvidia-vgpu-mgr nvidia-xid-logd; do
             if [ -e "$i" ]; then
                 install -Dm755 $i $bin/bin/$i
                 # unmodified binary backup for mounting in containers

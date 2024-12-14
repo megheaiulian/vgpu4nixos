@@ -165,6 +165,18 @@ in
           ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpu-mgr";
         };
       };
+      systemd.services.nvidia-xid-logd = {
+        enable = false; # disabled by default
+        description = "NVIDIA Xid Log Daemon";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "nvidia-vgpu-mgr.service" ];
+
+        serviceConfig = {
+          Type = "forking";
+          ExecStart = "${lib.getBin nvidiaCfg.package}/bin/nvidia-xid-logd";
+          RuntimeDirectory = "nvidia-xid-logd";
+        };
+      };
 
       environment.systemPackages = lib.optional (nvidiaCfg.vgpu.patcher.enablePatcherCmd) nvidiaCfg.package.vgpuPatcher;
 
