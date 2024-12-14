@@ -2,7 +2,7 @@
  Copyright (c) 2003-2024 Eelco Dolstra and the Nixpkgs/NixOS contributors
 
  Original source code:
- https://github.com/NixOS/nixpkgs/blob/54fee3a7e34a613aabc6dece34d5b7993183369c/pkgs/os-specific/linux/nvidia-x11/generic.nix
+ https://github.com/NixOS/nixpkgs/blob/ab7b1a09f830362a1220d2004b4cb7be30afcedc/pkgs/os-specific/linux/nvidia-x11/generic.nix
 */
 { version
 , settingsSha256 ? null
@@ -22,6 +22,7 @@
 , postPatch ? null
 , patchFlags ? null
 , patches ? [ ]
+, patchesOpen ? [ ]
 , preInstall ? null
 , postInstall ? null
 , broken ? false
@@ -29,6 +30,8 @@
 
 { lib
 , stdenv
+, runCommandLocal
+, patchutils
 , callPackage
 , pkgs
 , pkgsi686Linux
@@ -58,12 +61,33 @@
 , firmware ? false
 }:
 
-with lib;
-
 assert useSettings -> settingsSha256 != null;
 assert usePersistenced -> persistencedSha256 != null;
 
 let
+  # Rewrites patches meant for the kernel/* folder structure to kernel-open/*
+  rewritePatch =
+    { from, to }:
+    patch:
+    runCommandLocal (builtins.baseNameOf patch)
+      {
+        inherit patch;
+        nativeBuildInputs = [ patchutils ];
+      }
+      ''
+        lsdiff \
+          -p1 -i ${from}/'*' \
+          "$patch" \
+        | sort -u | sed -e 's/[*?]/\\&/g' \
+        | xargs -I{} \
+          filterdiff \
+          --include={} \
+          --strip=2 \
+          --addoldprefix=a/${to}/ \
+          --addnewprefix=b/${to}/ \
+          --clean "$patch" > "$out"
+      '';
+
   guiBundled = guest || merged;
   i686bundled = !disable32Bit && guiBundled;
 
@@ -91,15 +115,22 @@ let
 
     builder = ./builder.sh;
 
-    system = "x86_64";
-
-    inherit src patcher patcherArgs patches;
+    patches =
+      (
+        patches
+        ++ (builtins.map (rewritePatch {
+          from = "kernel-open";
+          to = "kernel";
+        }) patchesOpen)
+      );
+    inherit src patcher patcherArgs;
     inherit prePatch postPatch patchFlags;
     inherit preInstall postInstall;
     inherit version useGLVND useProfiles;
+    inherit (stdenv.hostPlatform) system;
     inherit guiBundled i686bundled;
 
-    postFixup = optionalString (!guest) ''
+    postFixup = lib.optionalString (!guest) ''
       # wrap sriov-manage
       wrapProgram $bin/bin/sriov-manage \
         --set PATH ${lib.makeBinPath [
@@ -110,8 +141,8 @@ let
     '';
 
     outputs = [ "out" "bin" ]
-      ++ optional i686bundled "lib32"
-      ++ optional firmware "firmware";
+      ++ lib.optional i686bundled "lib32"
+      ++ lib.optional firmware "firmware";
     outputDev = "bin";
 
     kernel = kernel.dev;
@@ -130,11 +161,11 @@ let
     dontPatchELF = true;
 
     libPath = libPathFor pkgs;
-    libPath32 = optionalString i686bundled (libPathFor pkgsi686Linux);
+    libPath32 = lib.optionalString i686bundled (libPathFor pkgsi686Linux);
 
-    buildInputs = optional (!guest) pciutils;
+    buildInputs = lib.optional (!guest) pciutils;
     nativeBuildInputs = [ perl nukeReferences makeWrapper which libarchive jq kernel.moduleBuildDependencies ]
-      ++ optional (!guest) bbe;
+      ++ lib.optional (!guest) bbe;
 
     disallowedReferences = [ kernel.dev ];
 
@@ -167,7 +198,7 @@ let
               } else { };
         persistenced =
           if usePersistenced then
-            mapNullable
+            lib.mapNullable
               (hash: callPackage
                 (import (pkgs.path + "/pkgs/os-specific/linux/nvidia-x11/persistenced.nix") self hash) {
                 fetchFromGitHub = fetchFromGithubOrNvidia;
@@ -184,9 +215,11 @@ let
         vgpuPatcher = patcher;
       };
 
-    meta = {
+    meta = with lib; {
+      license = licenses.unfree;
       platforms = [ "x86_64-linux" ]; # for compatibility with persistenced.nix and settings.nix
       priority = 4; # resolves collision with xorg-server's "lib/xorg/modules/extensions/libglx.so"
+      inherit broken;
     };
   };
 
