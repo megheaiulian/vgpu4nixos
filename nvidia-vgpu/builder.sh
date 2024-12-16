@@ -15,6 +15,14 @@ unpackManually() {
 
 unpackFile() {
     if [ -z "$patcher" ]; then
+        if [[ $src = *.zip ]]; then
+            if [ "$guest" = "1" ]; then
+                unzip -j $src "Guest_Drivers/*-grid.run"
+            else
+                unzip -j $src "Host_Drivers/*-vgpu-kvm.run"
+            fi
+            src=$(ls -1 *.run)
+        fi
         sh $src -x || unpackManually
     else
         # TODO: use fixupPhase for patching?

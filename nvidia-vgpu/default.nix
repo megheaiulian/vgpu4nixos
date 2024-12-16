@@ -47,6 +47,7 @@
 , makeWrapper
 , which
 , libarchive
+, unzip
 , jq
 
 , src
@@ -164,7 +165,7 @@ let
     libPath32 = lib.optionalString i686bundled (libPathFor pkgsi686Linux);
 
     buildInputs = lib.optional (!guest) pciutils;
-    nativeBuildInputs = [ perl nukeReferences makeWrapper which libarchive jq kernel.moduleBuildDependencies ]
+    nativeBuildInputs = [ perl nukeReferences makeWrapper which libarchive unzip jq kernel.moduleBuildDependencies ]
       ++ lib.optional (!guest) bbe;
 
     disallowedReferences = [ kernel.dev ];
