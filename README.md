@@ -1,5 +1,3 @@
-
-
 # nvidia-vgpu-nixos
 > [!NOTE]
 > Not to be confused with [nixos-nvidia-vgpu](https://github.com/Yeshey/nixos-nvidia-vgpu) by Yeshey
@@ -7,7 +5,9 @@
 NixOS module to support NVIDIA vGPU drivers (including GRID guest drivers). Also supports [vGPU-Unlock-patcher](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher) for vGPU unlock
 
 ## Installation
-Currently vGPU releases 16.5, 17.3 (latest with unlock support) and 16.2 are supported
+Currently these vGPU releases are selectable (you still can use your own version, see [Custom vGPU version](#custom-vgpu-version)):
+- With unlock support: 17.3, 16.5, 16.2
+- Without unlock: 17.4, 16.8
 
 ### With Flakes
 flake.nix:
@@ -129,5 +129,52 @@ nix-hash --flat --base64 --type sha256 /path/to/file.zip
 - `hardware.nvidia.vgpu.driverSource.curlOptsList` (list of strings) - a list of arguments to pass to `curl`
 	- For example, `["-u" "admin:some nice password"]`
 
-## Credits
-Some files from the `nvidia-x11` package in Nixpkgs are used. Nixpkgs is distributed under the [MIT license](https://github.com/NixOS/nixpkgs/blob/master/COPYING)
+### Custom vGPU version
+The `mkVgpuDriver` and `mkVgpuPatcher` allow you to create your own driver derivation that can be passed to `hardware.nvidia.package`. This way you can use a version of the vGPU that is not available by default (yet)
+
+#### Available attributes for `mkVgpuDriver`
+- `version` (string) - version of the host driver
+- `sha256` (string) - SHA-256 for **GRID .zip**, not .run
+- `guestVersion` (string) - version of the guest driver
+- `guestSha256` (string) - SHA-256 of the guest .run
+- `useSettings` (bool; optional) - whether to use nVidia X Server settings
+- `settingVersion` (string; optional) - the version of the settings app. Not required if `useSettings = false`
+- `settingsSha256` (string; optional) - SHA-256 of the settings app. Not required if `useSettings = false`
+- `usePersistenced` (bool; optional) - whether to use `nvidia-persistenced`
+- `persistencedVersion` (string; optional) - the version of `nvidia-persistenced`. Not required if `usePersistenced = false`
+- `persistencedSha256` (string; optional) - SHA-256 of `nvidia-persistenced`. Not required if `usePersistenced = false`
+- `generalVersion` (string) - The closest version of consumer nVidia graphics drivers to the vGPU version (usually with the same major and minor versions). Used to build `nvidia-settings` and `nvidia-persistenced`
+- `gridVersion` (string) - vGPU release (for example, 16.7, 17.2...)
+- `zipFilename` (string) - the full name of the GRID .zip file (including extension)
+- `vgpuPatcher` - a patcher derivation obtained from `mkVgpuPatcher` (set to `null` to disable patching)
+- `prePatch`, `postPatch`, `patchFlags`, `patches`, `preInstall`, `postInstall`, `broken` are passed directly to `stdenv.mkDerivation`
+
+#### Available attributes for `mkVgpuPatcher`
+> [!IMPORTANT]
+> The patcher created by `mkVgpuPatcher` cannot be overridden directly, because it returns a function that returns the derivation, not the derivation itself. You can still override it as follows:
+> ```nix
+> hardware.nvidia.package = (config.boot.kernelPackages.nvidiaPackages.mkVgpuDriver {
+>   version = "555.44.33";
+>   vgpuPatcher = config.boot.kernelPackages.nvidiaPackages.mkVgpuPatcher { /* ... */ };
+>   # ...
+> }).overrideAttrs (self: super: {
+>   vgpuPatcher = self.vgpuPatcher.override {
+>     # your overrides
+>   };
+> });
+> ```
+- `version` (string; optional) - the branch of the patcher, for visual appearance only
+- `rev` (string) - git revision of the patcher (usually a specific commit or `refs/heads/your-branch`)
+- `sha256` (string) - SHA-256 of the patcher source code
+- `generalVersion` (string) - version of the consumer (general) driver
+- `generalSha256` (string) - SHA-256 of the general driver
+- `linuxGuest` (string) - version of the Linux guest drivers
+- `linuxSha256` (string) - SHA-256 of Linux guest drivers
+- `windowsGuestFilename` (string) - the full name of the Windows guest driver file (including extension)
+- `windowsSha256` (string) - SHA-256 of Windows guest drivers
+- `gridVersion` (string) - vGPU release (for example, 16.7, 17.2...). Useless if `vgpuUrl` is specified.
+- `generalUrl` (string; optional) - URL where general drivers can be obtained
+- `vgpuUrl` (string; optional) - URL where guest drivers can be obtained
+
+## Attribution
+The files in the `nvidia-vgpu` directory are modified versions of those from the `nvidia-x11` package of Nixpkgs, which is distributed under the [MIT license](https://github.com/NixOS/nixpkgs/blob/master/COPYING)
