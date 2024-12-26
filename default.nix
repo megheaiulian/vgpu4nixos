@@ -168,7 +168,7 @@ in
     };
   };
   config = {
-    assertions = [
+    assertions = lib.optionals (config.hardware.nvidia.package ? vgpuPatcher) [
       {
         assertion = (pkgs.stdenv.hostPlatform.system == "x86_64-linux");
         message = "nvidia-vgpu only supports platform x86_64-linux";
@@ -267,8 +267,10 @@ in
         "${pref}_16_2" = mkVgpuDriver {
           version = "535.129.03";
           sha256 = "sha256-tFgDf7ZSIZRkvImO+9YglrLimGJMZ/fz25gjUT0TfDo=";
+          guestVersion = "535.129.03";
           guestSha256 = "sha256-RWemnuEuZRPszUvy+Mj1/rXa5wn8tsncXMeeJHKnCxw=";
           openSha256 = null;
+          generalVersion = "535.129.03";
           settingsSha256 = "sha256-QKN/gLGlT+/hAdYKlkIjZTgvubzQTt4/ki5Y+2Zj3pk=";
           persistencedSha256 = "sha256-FRMqY5uAJzq3o+YdM2Mdjj8Df6/cuUUAnh52Ne4koME=";
           gridVersion = "16.2";
