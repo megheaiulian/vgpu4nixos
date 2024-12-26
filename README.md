@@ -158,7 +158,7 @@ The `mkVgpuDriver` and `mkVgpuPatcher` allow you to create your own driver deriv
 >   vgpuPatcher = config.boot.kernelPackages.nvidiaPackages.mkVgpuPatcher { /* ... */ };
 >   # ...
 > }).overrideAttrs (self: super: {
->   vgpuPatcher = self.vgpuPatcher.override {
+>   patcher = self.patcher.override {
 >     # your overrides
 >   };
 > });
