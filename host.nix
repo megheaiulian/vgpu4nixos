@@ -128,12 +128,12 @@ in
         description = "NVIDIA vGPU Daemon";
         wants = [ "syslog.target" ];
         wantedBy = [ "multi-user.target" ];
-
         serviceConfig = {
           Type = "forking";
           ExecStart = "${lib.getBin nvidiaCfg.package}/bin/nvidia-vgpud";
           ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpud";
         };
+        restartIfChanged = false;
       };
       systemd.services.nvidia-vgpu-mgr = {
         description = "NVIDIA vGPU Manager Daemon";
@@ -141,25 +141,25 @@ in
         wantedBy = [ "multi-user.target" ];
         requires = [ "nvidia-vgpud.service" ];
         after = [ "nvidia-vgpud.service" ];
-
         serviceConfig = {
           Type = "forking";
           KillMode = "process";
           ExecStart = "${lib.getBin nvidiaCfg.package}/bin/nvidia-vgpu-mgr";
           ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-vgpu-mgr";
         };
+        restartIfChanged = false;
       };
       systemd.services.nvidia-xid-logd = {
         enable = false; # disabled by default
         description = "NVIDIA Xid Log Daemon";
         wantedBy = [ "multi-user.target" ];
         after = [ "nvidia-vgpu-mgr.service" ];
-
         serviceConfig = {
           Type = "forking";
           ExecStart = "${lib.getBin nvidiaCfg.package}/bin/nvidia-xid-logd";
           RuntimeDirectory = "nvidia-xid-logd";
         };
+        restartIfChanged = false;
       };
 
       environment.systemPackages = lib.optional (nvidiaCfg.vgpu.patcher.enablePatcherCmd) nvidiaCfg.package.vgpuPatcher;

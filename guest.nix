@@ -10,7 +10,6 @@ with lib;
       after = [ "systemd-resolved.service" "network-online.target" "nvidia-persistenced.service" ];
       wantedBy = [ "multi-user.target" ];
       environment = { LD_LIBRARY_PATH = "${getOutput "out" config.hardware.nvidia.package}/lib"; };
-
       serviceConfig = {
         Type = "forking";
         # make sure /var/lib/nvidia exists, otherwise service will fail
@@ -18,15 +17,16 @@ with lib;
         ExecStart = "${getBin config.hardware.nvidia.package}/bin/nvidia-gridd";
         ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-gridd";
       };
+      restartIfChanged = false;
     };
     systemd.services.nvidia-topologyd = {
       description = "NVIDIA Topology Daemon";
       wantedBy = [ "multi-user.target" ];
-
       serviceConfig = {
         Type = "forking";
         ExecStart = "${getBin config.hardware.nvidia.package}/bin/nvidia-topologyd";
       };
+      restartIfChanged = false;
     };
 
     environment.etc = {
