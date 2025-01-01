@@ -5,22 +5,6 @@ with lib;
 let
   nvidiaCfg = config.hardware.nvidia;
 
-  # https://gist.github.com/corpix/f761c82c9d6fdbc1b3846b37e1020e11#file-numbers-nix-L58-L71
-  decToHex =
-    let
-      intToHex = [
-        "0" "1" "2" "3" "4" "5" "6" "7" "8" "9"
-        "A" "B" "C" "D" "E" "F"
-      ];
-      toHex' = q: a:
-        if q > 0
-        then (toHex'
-          (q / 16)
-          ((elemAt intToHex (mod q 16)) + a))
-        else a;
-    in
-      v: toHex' v "";
-
   genXmlstarletCmd = overrides: lib.attrsets.foldlAttrs (s: n: v:
     s + (lib.attrsets.foldlAttrs (s': n': v': let
       vFlags = if builtins.isAttrs v' then
@@ -38,9 +22,9 @@ let
       profSizeDec = 1048576 * v.vramAllocation;
       fbResDec = 134217728 + ((v.vramAllocation - 1024) * 65536);
     in {
-      profileSize = "0x${decToHex profSizeDec}";
-      framebuffer = "0x${decToHex (profSizeDec - fbResDec)}";
-      fbReservation = "0x${decToHex fbResDec}";
+      profileSize = "0x${lib.toHexString profSizeDec}";
+      framebuffer = "0x${lib.toHexString (profSizeDec - fbResDec)}";
+      fbReservation = "0x${lib.toHexString fbResDec}";
     }))
     // (optionalAttrs (v.heads != null) { numHeads = (builtins.toString v.heads); })
     // (optionalAttrs (v.display.width != null && v.display.height != null) {
@@ -51,7 +35,7 @@ let
       maxPixels = (builtins.toString (v.display.width * v.display.height));
     })
     // (optionalAttrs (v.framerateLimit != null) {
-      frlConfig = "0x${decToHex v.framerateLimit}";
+      frlConfig = "0x${lib.toHexString v.framerateLimit}";
       frame_rate_limiter = if v.framerateLimit > 0 then "1" else "0";
     })
     // v.xmlConfig
