@@ -1,8 +1,6 @@
-# nvidia-vgpu-nixos
-> [!NOTE]
-> Not to be confused with [nixos-nvidia-vgpu](https://github.com/Yeshey/nixos-nvidia-vgpu) by Yeshey
+# vgpu4nixos
 
-NixOS module to support NVIDIA vGPU drivers (including GRID guest drivers). Also supports [vGPU-Unlock-patcher](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher) for vGPU unlock
+Use NVIDIA vGPU on NixOS (both host and guest). Also supports [vGPU-Unlock-patcher](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher) (VUP for short) to unlock vGPU capabilities on consumer cards
 
 ## Installation
 Currently these vGPU releases are selectable (you still can use your own version, see [Custom vGPU version](#custom-vgpu-version)):
@@ -15,16 +13,16 @@ flake.nix:
 {
   inputs = {
     /* ... */
-    nvidia-vgpu-nixos.url = "github:mrzenc/nvidia-vgpu-nixos";
+    vgpu4nixos.url = "github:mrzenc/vgpu4nixos";
   };
 
-  outputs = { self, nixpkgs, nvidia-vgpu-nixos, ... }@inputs: {
+  outputs = { self, nixpkgs, vgpu4nixos, ... }@inputs: {
     nixosConfigurations.mrzenc = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [
         ./configuration.nix
         /* ... */
-        nvidia-vgpu-nixos.nixosModules.host # Use nixosModules.guest for VMs
+        vgpu4nixos.nixosModules.host # Use nixosModules.guest for VMs
       ];
       /* ... */
     };
@@ -41,7 +39,7 @@ configuration.nix:
     ./hardware-configuration.nix
     /* ... */
     (import (builtins.fetchGit {
-      url = "https://github.com/mrzenc/nvidia-vgpu-nixos.git";
+      url = "https://github.com/mrzenc/vgpu4nixos.git";
       # Pin to specific commit (example value)
       # rev = "b6ddaeb51b1575c6c8ec05b117c3a8bfa3539e92";
     }) { guest = false; }) # Use { guest = true; } for VMs
@@ -51,7 +49,7 @@ configuration.nix:
 }
 ```
 ---
-Now more packages will be available in `config.boot.kernelPackages.nvidiaPackages`, for example `vgpu_16_2` for the host or `grid_16_2` for the guest. Specify the package in the `configuration.nix` file as follows:
+Now more packages will be available in `config.boot.kernelPackages.nvidiaPackages`, for example `vgpu_16_2` for the host or `grid_16_2` for the guest. Specify the package in your configuration as follows:
 ```nix
 { config, pkgs, lib, ... }:
 {
@@ -63,13 +61,13 @@ Now more packages will be available in `config.boot.kernelPackages.nvidiaPackage
 }
 ```
 
-After that (during the first rebuild), the module will require you to add the GRID .zip archive (it must be `Linux-KVM` one, for example `NVIDIA-GRID-Linux-KVM-535.129.03-537.70.zip`) to the Nix store on the host. This does not apply to the guest
+After that (during the first `nixos-rebuild`), the module will require you to add the GRID .zip archive (it must be `Linux-KVM` one, for example `NVIDIA-GRID-Linux-KVM-535.129.03-537.70.zip`) to the Nix store on the host. **This does not apply to the guest**
 
 ## Configuration
-After installation, new options should appear in `hardware.nvidia.vgpu`
+New options should appear in `hardware.nvidia.vgpu` after you specify the vGPU package
 
 ### `hardware.nvidia.vgpu.patcher`
-VUP-related options. Please read the repository's [README](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher/blob/535.129/README.md) if you don't know how to use it. Most likely, you will only need to specify `hardware.nvidia.vgpu.patcher.enable = true` and in some cases `hardware.nvidia.vgpu.patcher.copyVGPUProfiles`
+VUP-related options. Please read the repository's [README](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher/blob/535.161/README.md) if you don't know how to use it. Most likely, you will only need to specify `hardware.nvidia.vgpu.patcher.enable = true` and in some cases `hardware.nvidia.vgpu.patcher.copyVGPUProfiles`
 
 > [!NOTE]
 > The target for the vGPU patcher is determined automatically. For a guest, it will always be `grid`. For the host, if `services.xserver.videoDrivers = ["nvidia"];` is specified, it will be `general-merge` (merged), otherwise `vgpu-kvm`.
@@ -117,7 +115,7 @@ The module makes some assumptions about what file to retrieve and from where:
 - `url = null` will force the driver to be fetched from the Nix store (useful for guests)
 - if `name` ends with the extension `.run`, then the .run file will be expected, the same with .zip (useful for guests)
 
-To calculate `sha256` (if you have the file locally, otherwise set it to `""` which will throw an error with the correct hash) you can use `nix-hash`:
+To calculate `sha256` (not necessary when fetching from url, set it to `""` to find out) you can use `nix-hash`:
 ```
 nix-hash --flat --base64 --type sha256 /path/to/file.zip
 ```
