@@ -190,6 +190,19 @@ in
       (overlayNvidiaPackages {
         inherit mkVgpuDriver mkVgpuPatcher;
 
+        "${pref}_17_5" = mkVgpuDriver {
+          version = "550.144.02";
+          sha256 = "sha256-VeXJUqF82jp3wEKmCaH5VKQTS9e0gQmwkorf4GBcS8g=";
+          guestVersion = "550.144.03";
+          guestSha256 = "sha256-7EWHVpF6mzyhPUmASgbTJuYihUhqcNdvKDTHYQ53QFY=";
+          openSha256 = null; # TODO: nvidia-open support
+          generalVersion = "550.144.03";
+          settingsSha256 = "sha256-ZopBInC4qaPvTFJFUdlUw4nmn5eRJ1Ti3kgblprEGy4=";
+          usePersistenced = false;
+          gridVersion = "17.5";
+          zipFilename = "NVIDIA-GRID-Linux-KVM-550.144.02-550.144.03-553.62.zip";
+          vgpuPatcher = null;
+        };
         "${pref}_17_4" = mkVgpuDriver {
           version = "550.127.06";
           sha256 = "sha256-w5Oow0G8R5QDckNw+eyfeaQm98JkzsgL0tc9HIQhE/g=";
@@ -226,6 +239,19 @@ in
             windowsSha256 = "sha256-UU+jbwlfg9xCie8IjPASb/gWalcEzAwzy+VAmgr0868=";
             gridVersion = "17.3";
           };
+        };
+        "${pref}_16_9" = mkVgpuDriver {
+          version = "535.230.02";
+          sha256 = "sha256-FMzf35R3o6bXVoAcYXrL3eBEFkQNRh96RnZ/qn5eeWs=";
+          guestVersion = "535.230.02";
+          guestSha256 = "sha256-7/ujzYAMNnMFOT/pV+z4dYsbMUDaWf5IoqNHDr1Pf/w=";
+          openSha256 = null; # TODO: nvidia-open support
+          generalVersion = "535.113.01"; # HACK: nvidia-settings Github doesn't include 535.230.02 tag
+          settingsSha256 = "sha256-hiX5Nc4JhiYYt0jaRgQzfnmlEQikQjuO0kHnqGdDa04=";
+          usePersistenced = false;
+          gridVersion = "16.9";
+          zipFilename = "NVIDIA-GRID-Linux-KVM-535.230.02-539.19.zip";
+          vgpuPatcher = null;
         };
         "${pref}_16_8" = mkVgpuDriver {
           version = "535.216.01";
