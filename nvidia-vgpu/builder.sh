@@ -1,7 +1,7 @@
 # Copyright (c) 2003-2024 Eelco Dolstra and the Nixpkgs/NixOS contributors
 #
 # Original source code:
-# https://github.com/NixOS/nixpkgs/blob/ab7b1a09f830362a1220d2004b4cb7be30afcedc/pkgs/os-specific/linux/nvidia-x11/builder.sh
+# https://github.com/NixOS/nixpkgs/blob/85149743aab230dfbf3ffd538a8dd44972883b59/pkgs/os-specific/linux/nvidia-x11/builder.sh
 
 if [ -e "$NIX_ATTRS_SH_FILE" ]; then . "$NIX_ATTRS_SH_FILE"; elif [ -f .attrs.sh ]; then . .attrs.sh; fi
 source $stdenv/setup
@@ -152,9 +152,10 @@ installPhase() {
         fi
 
         # Install libraries needed by Proton to support DLSS
-        if [ -e nvngx.dll ] && [ -e _nvngx.dll ]; then
-            install -Dm644 -t $i/lib/nvidia/wine/ nvngx.dll _nvngx.dll
-        fi
+        for winelib in $(find . -name '*nvngx*.dll')
+        do
+            install -Dm644 -t $i/lib/nvidia/wine/ "$winelib"
+        done
     done
 
 

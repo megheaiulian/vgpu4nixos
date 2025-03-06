@@ -2,7 +2,7 @@
  Copyright (c) 2003-2024 Eelco Dolstra and the Nixpkgs/NixOS contributors
 
  Original source code:
- https://github.com/NixOS/nixpkgs/blob/ab7b1a09f830362a1220d2004b4cb7be30afcedc/pkgs/os-specific/linux/nvidia-x11/generic.nix
+ https://github.com/NixOS/nixpkgs/blob/85149743aab230dfbf3ffd538a8dd44972883b59/pkgs/os-specific/linux/nvidia-x11/generic.nix
 */
 { version
 , settingsSha256 ? null
@@ -22,7 +22,6 @@
 , postPatch ? null
 , patchFlags ? null
 , patches ? [ ]
-, patchesOpen ? [ ]
 , preInstall ? null
 , postInstall ? null
 , broken ? false
@@ -38,6 +37,7 @@
 , fetchurl
 , fetchzip
 , kernel
+, kernelModuleMakeFlags ? []
 , bbe
 , perl
 , gawk
@@ -116,20 +116,12 @@ let
 
     builder = ./builder.sh;
 
-    patches =
-      (
-        patches
-        ++ (builtins.map (rewritePatch {
-          from = "kernel-open";
-          to = "kernel";
-        }) patchesOpen)
-      );
     inherit src patcher patcherArgs;
     inherit prePatch postPatch patchFlags;
     inherit preInstall postInstall;
     inherit version useGLVND useProfiles;
     inherit (stdenv.hostPlatform) system;
-    inherit guiBundled i686bundled;
+    inherit guiBundled i686bundled patches;
 
     postFixup = lib.optionalString (!guest) ''
       # wrap sriov-manage
@@ -149,7 +141,7 @@ let
     kernel = kernel.dev;
     kernelVersion = kernel.modDirVersion;
 
-    makeFlags = kernel.makeFlags ++ [
+    makeFlags = kernelModuleMakeFlags ++ [
       "IGNORE_PREEMPT_RT_PRESENCE=1"
       "NV_BUILD_SUPPORTS_HMM=1"
       "SYSSRC=${kernel.dev}/lib/modules/${kernel.modDirVersion}/source"
