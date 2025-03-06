@@ -1,4 +1,10 @@
-{ pkgs, lib, config, inputs, ... }@args:
+{
+  pkgs,
+  lib,
+  config,
+  inputs,
+  ...
+}@args:
 
 with lib;
 
@@ -6,10 +12,19 @@ with lib;
   config = mkIf (builtins.hasAttr "vgpuPatcher" config.hardware.nvidia.package) {
     systemd.services.nvidia-gridd = {
       description = "NVIDIA Grid Daemon";
-      wants = [ "network-online.target" "nvidia-persistenced.service" ];
-      after = [ "systemd-resolved.service" "network-online.target" "nvidia-persistenced.service" ];
+      wants = [
+        "network-online.target"
+        "nvidia-persistenced.service"
+      ];
+      after = [
+        "systemd-resolved.service"
+        "network-online.target"
+        "nvidia-persistenced.service"
+      ];
       wantedBy = [ "multi-user.target" ];
-      environment = { LD_LIBRARY_PATH = "${getOutput "out" config.hardware.nvidia.package}/lib"; };
+      environment = {
+        LD_LIBRARY_PATH = "${getOutput "out" config.hardware.nvidia.package}/lib";
+      };
       serviceConfig = {
         Type = "forking";
         # make sure /var/lib/nvidia exists, otherwise service will fail
@@ -31,7 +46,8 @@ with lib;
 
     environment.etc = {
       "nvidia/gridd.conf.template".source = config.hardware.nvidia.package + /gridd.conf.template;
-      "nvidia/nvidia-topologyd.conf.template".source = config.hardware.nvidia.package + /nvidia-topologyd.conf.template;
+      "nvidia/nvidia-topologyd.conf.template".source =
+        config.hardware.nvidia.package + /nvidia-topologyd.conf.template;
     };
     # nvidia modeset MUST be enabled in order to work correctly
     hardware.nvidia.modesetting.enable = true;

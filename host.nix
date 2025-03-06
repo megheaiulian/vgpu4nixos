@@ -1,45 +1,69 @@
-{ pkgs, lib, config, inputs, ... }@args:
+{
+  pkgs,
+  lib,
+  config,
+  inputs,
+  ...
+}@args:
 
 with lib;
 
 let
   nvidiaCfg = config.hardware.nvidia;
 
-  genXmlstarletCmd = overrides: lib.attrsets.foldlAttrs (s: n: v:
-    s + (lib.attrsets.foldlAttrs (s': n': v': let
-      vFlags = if builtins.isAttrs v' then
-          # yes, three nested loops
-          (lib.attrsets.foldlAttrs(ss: nn: vv: ss + " -u '/vgpuconfig/vgpuType[@id=\"${n}\"]/${n'}/@${nn}' -v ${vv}") "" v')
-        else
-          " -u '/vgpuconfig/vgpuType[@id=\"${n}\"]/${n'}/text()' -v ${builtins.toString v'}";
-    in s' + vFlags) "" v)
+  genXmlstarletCmd =
+    overrides:
+    lib.attrsets.foldlAttrs (
+      s: n: v:
+      s
+      + (lib.attrsets.foldlAttrs (
+        s': n': v':
+        let
+          vFlags =
+            if builtins.isAttrs v' then
+              # yes, three nested loops
+              (lib.attrsets.foldlAttrs (
+                ss: nn: vv:
+                ss + " -u '/vgpuconfig/vgpuType[@id=\"${n}\"]/${n'}/@${nn}' -v ${vv}"
+              ) "" v')
+            else
+              " -u '/vgpuconfig/vgpuType[@id=\"${n}\"]/${n'}/text()' -v ${builtins.toString v'}";
+        in
+        s' + vFlags
+      ) "" v)
     ) "xmlstarlet ed -P" overrides;
 
-  xmlstarletCmd = genXmlstarletCmd (lib.mapAttrs (_: v:
-    (optionalAttrs (v.vramAllocation != null) (let
-      # a little bit modified version of
-      # https://discord.com/channels/829786927829745685/1162008346551926824/1171897739576086650
-      profSizeDec = 1048576 * v.vramAllocation;
-      fbResDec = 134217728 + ((v.vramAllocation - 1024) * 65536);
-    in {
-      profileSize = "0x${lib.toHexString profSizeDec}";
-      framebuffer = "0x${lib.toHexString (profSizeDec - fbResDec)}";
-      fbReservation = "0x${lib.toHexString fbResDec}";
-    }))
-    // (optionalAttrs (v.heads != null) { numHeads = (builtins.toString v.heads); })
-    // (optionalAttrs (v.display.width != null && v.display.height != null) {
-      display = {
-        width = (builtins.toString v.display.width);
-        height = (builtins.toString v.display.height);
-      };
-      maxPixels = (builtins.toString (v.display.width * v.display.height));
-    })
-    // (optionalAttrs (v.framerateLimit != null) {
-      frlConfig = "0x${lib.toHexString v.framerateLimit}";
-      frame_rate_limiter = if v.framerateLimit > 0 then "1" else "0";
-    })
-    // v.xmlConfig
-  ) nvidiaCfg.vgpu.patcher.profileOverrides);
+  xmlstarletCmd = genXmlstarletCmd (
+    lib.mapAttrs (
+      _: v:
+      (optionalAttrs (v.vramAllocation != null) (
+        let
+          # a little bit modified version of
+          # https://discord.com/channels/829786927829745685/1162008346551926824/1171897739576086650
+          profSizeDec = 1048576 * v.vramAllocation;
+          fbResDec = 134217728 + ((v.vramAllocation - 1024) * 65536);
+        in
+        {
+          profileSize = "0x${lib.toHexString profSizeDec}";
+          framebuffer = "0x${lib.toHexString (profSizeDec - fbResDec)}";
+          fbReservation = "0x${lib.toHexString fbResDec}";
+        }
+      ))
+      // (optionalAttrs (v.heads != null) { numHeads = (builtins.toString v.heads); })
+      // (optionalAttrs (v.display.width != null && v.display.height != null) {
+        display = {
+          width = (builtins.toString v.display.width);
+          height = (builtins.toString v.display.height);
+        };
+        maxPixels = (builtins.toString (v.display.width * v.display.height));
+      })
+      // (optionalAttrs (v.framerateLimit != null) {
+        frlConfig = "0x${lib.toHexString v.framerateLimit}";
+        frame_rate_limiter = if v.framerateLimit > 0 then "1" else "0";
+      })
+      // v.xmlConfig
+    ) nvidiaCfg.vgpu.patcher.profileOverrides
+  );
 in
 {
   options = {
@@ -55,7 +79,7 @@ in
         };
         copyVGPUProfiles = mkOption {
           type = types.attrs;
-          default = {};
+          default = { };
           example = {
             "5566:7788" = "1122:3344";
           };
@@ -65,53 +89,57 @@ in
           '';
         };
         profileOverrides = mkOption {
-          type = (types.attrsOf (types.submodule {
-            options = {
-              vramAllocation = mkOption {
-                type = types.nullOr types.int;
-                default = null;
-                description = "vRAM allocation in megabytes. `profileSize`, `framebuffer` and `fbReservation` will be calculated automatically.";
-              };
-              heads = mkOption {
-                type = types.nullOr types.int;
-                default = null;
-                description = "Maximum allowed virtual monitors (heads).";
-              };
-              enableCuda = mkOption {
-                type = types.nullOr types.bool;
-                default = null;
-                description = "Whenether to enable CUDA support.";
-              };
-              display.width = mkOption {
-                type = types.nullOr types.int;
-                default = null;
-                description = "Display width in pixels. `maxPixels` will be calculated automatically.";
-              };
-              display.height = mkOption {
-                type = types.nullOr types.int;
-                default = null;
-                description = "Display height in pixels. `maxPixels` will be calculated automatically.";
-              };
-              framerateLimit = mkOption {
-                type = types.nullOr types.int;
-                default = null;
-                description = "Cap FPS to specific value. `0` will disable limit.";
-              };
-              xmlConfig = mkOption {
-                type = types.attrs;
-                default = {};
-                example = {
-                  eccSupported = "1";
-                  license = "NVS";
+          type = (
+            types.attrsOf (
+              types.submodule {
+                options = {
+                  vramAllocation = mkOption {
+                    type = types.nullOr types.int;
+                    default = null;
+                    description = "vRAM allocation in megabytes. `profileSize`, `framebuffer` and `fbReservation` will be calculated automatically.";
+                  };
+                  heads = mkOption {
+                    type = types.nullOr types.int;
+                    default = null;
+                    description = "Maximum allowed virtual monitors (heads).";
+                  };
+                  enableCuda = mkOption {
+                    type = types.nullOr types.bool;
+                    default = null;
+                    description = "Whenether to enable CUDA support.";
+                  };
+                  display.width = mkOption {
+                    type = types.nullOr types.int;
+                    default = null;
+                    description = "Display width in pixels. `maxPixels` will be calculated automatically.";
+                  };
+                  display.height = mkOption {
+                    type = types.nullOr types.int;
+                    default = null;
+                    description = "Display height in pixels. `maxPixels` will be calculated automatically.";
+                  };
+                  framerateLimit = mkOption {
+                    type = types.nullOr types.int;
+                    default = null;
+                    description = "Cap FPS to specific value. `0` will disable limit.";
+                  };
+                  xmlConfig = mkOption {
+                    type = types.attrs;
+                    default = { };
+                    example = {
+                      eccSupported = "1";
+                      license = "NVS";
+                    };
+                    description = ''
+                      Additional XML configuration.
+                      `{ a = "b"; }` is equal to `<a>b</a>`, `{ a = { b = "d"; c = "e"; }; }` is equal to `<a b="d" c="e"/>`.
+                    '';
+                  };
                 };
-                description = ''
-                  Additional XML configuration.
-                  `{ a = "b"; }` is equal to `<a>b</a>`, `{ a = { b = "d"; c = "e"; }; }` is equal to `<a b="d" c="e"/>`.
-                '';
-              };
-            };
-          }));
-          default = {};
+              }
+            )
+          );
+          default = { };
           description = "Allows to edit vGPU profiles' properties like vRAM allocation, maximum display size, etc.";
         };
         enablePatcherCmd = mkOption {
@@ -165,28 +193,44 @@ in
       environment.systemPackages = lib.optional (nvidiaCfg.vgpu.patcher.enablePatcherCmd) nvidiaCfg.package.vgpuPatcher;
 
       environment.etc."nvidia/vgpu/vgpuConfig.xml".source =
-        (if nvidiaCfg.vgpu.patcher.enable && nvidiaCfg.vgpu.patcher.profileOverrides != {}
-        then
-          (pkgs.runCommand "vgpuconfig-override" { nativeBuildInputs = [ pkgs.xmlstarlet ]; } ''
-            mkdir -p $out
-            ${xmlstarletCmd} ${nvidiaCfg.package + /vgpuConfig.xml} > $out/vgpuConfig.xml
-          '')
-        else
-          nvidiaCfg.package) + /vgpuConfig.xml;
+        (
+          if nvidiaCfg.vgpu.patcher.enable && nvidiaCfg.vgpu.patcher.profileOverrides != { } then
+            (pkgs.runCommand "vgpuconfig-override" { nativeBuildInputs = [ pkgs.xmlstarlet ]; } ''
+              mkdir -p $out
+              ${xmlstarletCmd} ${nvidiaCfg.package + /vgpuConfig.xml} > $out/vgpuConfig.xml
+            '')
+          else
+            nvidiaCfg.package
+        )
+        + /vgpuConfig.xml;
     })
 
     # The absence of the "nvidia" element in the config.services.xserver.videoDrivers option (to use non-merged drivers in our case)
     # will result in the driver not being installed properly without this fix
-    (mkIf ((builtins.hasAttr "vgpuPatcher" nvidiaCfg.package) && !(lib.elem "nvidia" config.services.xserver.videoDrivers)) {
-      boot = {
-        blacklistedKernelModules = [ "nouveau" "nvidiafb" ];
-        extraModulePackages = [ nvidiaCfg.package.bin ]; # TODO: nvidia-open support
-        kernelModules = [ "nvidia" "nvidia-vgpu-vfio" ];
-      };
-      environment.systemPackages = [ nvidiaCfg.package.bin ];
+    (mkIf
+      (
+        (builtins.hasAttr "vgpuPatcher" nvidiaCfg.package)
+        && !(lib.elem "nvidia" config.services.xserver.videoDrivers)
+      )
+      {
+        boot = {
+          blacklistedKernelModules = [
+            "nouveau"
+            "nvidiafb"
+          ];
+          extraModulePackages = [ nvidiaCfg.package.bin ]; # TODO: nvidia-open support
+          kernelModules = [
+            "nvidia"
+            "nvidia-vgpu-vfio"
+          ];
+        };
+        environment.systemPackages = [ nvidiaCfg.package.bin ];
 
-      # taken from nixpkgs
-      systemd.tmpfiles.rules = lib.mkIf config.virtualisation.docker.enableNvidia [ "L+ /run/nvidia-docker/bin - - - - ${nvidiaCfg.package.bin}/origBin" ];
-    })
+        # taken from nixpkgs
+        systemd.tmpfiles.rules = lib.mkIf config.virtualisation.docker.enableNvidia [
+          "L+ /run/nvidia-docker/bin - - - - ${nvidiaCfg.package.bin}/origBin"
+        ];
+      }
+    )
   ];
 }

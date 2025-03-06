@@ -5,13 +5,15 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
   };
 
-  outputs = { self, nixpkgs, ... }@inputs:
-  let
-    nixosModule = guest: import ./default.nix { inherit inputs guest; };
-  in {
-    nixosModules = {
-      host = (nixosModule false);
-      guest = (nixosModule true);
+  outputs =
+    { self, nixpkgs, ... }@inputs:
+    let
+      nixosModule = guest: import ./default.nix { inherit inputs guest; };
+    in
+    {
+      nixosModules = {
+        host = (nixosModule false);
+        guest = (nixosModule true);
+      };
     };
-  };
 }
