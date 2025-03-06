@@ -133,6 +133,11 @@ installPhase() {
             install -Dm644 nvidia_layers.json.fixed $i/share/vulkan/implicit_layer.d/nvidia_layers.json
         fi
 
+        if [ -e nvidia_icd_vksc.json ]; then
+            sed -E "s#(libnvidia-vksc-core)#$i/lib/\\1#" nvidia_icd_vksc.json > nvidia_icd_vksc.json.fixed
+            install -Dm644 nvidia_icd_vksc.json.fixed $i/share/vulkan/icd.d/nvidia_icd_vksc.json
+        fi
+
         # EGL
         if [ "$useGLVND" = "1" ]; then
             mkdir -p "$i/share/egl/egl_external_platform.d"
@@ -275,7 +280,7 @@ EOF
 
         # Install the programs.
         for i in nvidia-cuda-mps-control nvidia-cuda-mps-server nvidia-smi nvidia-debugdump nvidia-powerd \
-            nvidia-gridd nvidia-topologyd nvidia-vgpud nvidia-vgpu-mgr nvidia-xid-logd; do
+            nvidia-gridd nvidia-topologyd nvidia-vgpud nvidia-vgpu-mgr nvidia-xid-logd nvidia-pcc; do
             if [ -e "$i" ]; then
                 install -Dm755 $i $bin/bin/$i
                 # unmodified binary backup for mounting in containers
