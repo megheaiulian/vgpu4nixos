@@ -104,6 +104,8 @@ let
     fetchGuests = vgpuCfg.patcher.enablePatcherCmd or false;
   });
   vgpuNixpkgsPkgs = {
+    inherit mkVgpuDriver mkVgpuPatcher;
+
     "${pref}_17_5" = mkVgpuDriver {
       version = "550.144.02";
       sha256 = "sha256-VeXJUqF82jp3wEKmCaH5VKQTS9e0gQmwkorf4GBcS8g=";
@@ -314,7 +316,6 @@ in
     # Add our packages to nvidiaPackages
     nixpkgs.overlays = [
       (overlayNvidiaPackages (vgpuNixpkgsPkgs // {
-        inherit mkVgpuDriver mkVgpuPatcher;
         vgpuNixpkgsOverlay = overlayNvidiaPackages vgpuNixpkgsPkgs;
       }))
     ];
