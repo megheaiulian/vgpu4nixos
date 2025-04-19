@@ -5,7 +5,7 @@ Use NVIDIA vGPU on NixOS (both host and guest). Also supports [vGPU-Unlock-patch
 ## Installation
 Currently these vGPU releases are selectable (you still can use your own version, see [Custom vGPU version](#custom-vgpu-version)):
 - With unlock support: 17.3, 16.5, 16.2
-- Without unlock: 18.0, 17.5, 17.4, 16.9, 16.8
+- Without unlock: 18.1, 18.0, 17.5, 17.4, 16.9, 16.8
 
 ### With Flakes
 flake.nix:

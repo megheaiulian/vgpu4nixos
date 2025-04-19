@@ -192,6 +192,19 @@ let
   vgpuNixpkgsPkgs = {
     inherit mkVgpuDriver mkVgpuPatcher;
 
+    "${pref}_18_1" = mkVgpuDriver {
+      version = "570.133.10";
+      sha256 = "sha256-ybQkOshVruMtKUWqi7lYnO3zrclB2W/O2RZZ5350Tec=";
+      guestVersion = "570.133.20";
+      guestSha256 = "sha256-3VM9X188aiVKUPDNHgT0NW072TD28che5ElBkY7wYVQ=";
+      openSha256 = null; # TODO: nvidia-open support
+      generalVersion = "570.133.07";
+      settingsSha256 = "sha256-XMk+FvTlGpMquM8aE8kgYK2PIEszUZD2+Zmj2OpYrzU=";
+      usePersistenced = false;
+      gridVersion = "18.1";
+      zipFilename = "NVIDIA-GRID-Linux-KVM-570.133.10-570.133.20-572.83.zip";
+      vgpuPatcher = null;
+    };
     "${pref}_18_0" = mkVgpuDriver {
       version = "570.124.03";
       sha256 = "sha256-g8nUKslFOmYd8ibQ+5v21mrZeBqNhiQPkPZKPUfCwAA=";
