@@ -1,13 +1,27 @@
 # vgpu4nixos
 
-Use NVIDIA vGPU on NixOS (both host and guest). Also supports [vGPU-Unlock-patcher](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher) (VUP for short) to unlock vGPU capabilities on consumer cards
+Use NVIDIA vGPU on NixOS, for both host and guest. Supports 16.x, 17.x and 18.x releases
+
+Module adds new packages that can be selected in `hardware.nvidia.package`. Additionally, there is `hardware.nvidia.vgpu` submodule for additional configuration
+
+Also features an integration with [vGPU-Unlock-patcher](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher)
+
+### List of supported releases:
+Releases not mentioned here can still be used, but you have to [create your own driver derivation](#custom-vgpu-version).
+- 16.x: 16.2, 16.5, 16.8, 16.9, 16.10
+- 17.x: 17.3, 17.4, 17.5, 17.6
+- 18.x: 18.0, 18.1
 
 ## Installation
-Currently these vGPU releases are selectable (you still can use your own version, see [Custom vGPU version](#custom-vgpu-version)):
-- With unlock support: 17.3, 16.5, 16.2
-- Without unlock: 18.1, 18.0, 17.5, 17.4, 16.9, 16.8
 
-### With Flakes
+`vgpu4nixos` supports both Flakes and non-flake environments, though former is recommended
+
+> [!IMPORTANT]
+> Module will not be able to download host drivers automatically since they are not available for public download. Error message will contain instructions on how to add local GRID archive to Nix store
+>
+> **This is the case for host only.** Guest drivers are fetched from [Google Cloud](https://cloud.google.com/compute/docs/gpus/grid-drivers-table). 
+
+### Flakes
 flake.nix:
 ```nix
 {
@@ -49,25 +63,31 @@ configuration.nix:
 }
 ```
 ---
-Now more packages will be available in `config.boot.kernelPackages.nvidiaPackages`, for example `vgpu_16_2` for the host or `grid_16_2` for the guest. Specify the package in your configuration as follows:
+New packages will be available in `config.boot.kernelPackages.nvidiaPackages` in the form of `vgpu_XX_X` for the host or `grid_XX_X` for the guest. Specify the package in your configuration as follows:
 ```nix
 { config, pkgs, lib, ... }:
 {
   /* ... */
+
+  # You want to include this if you're using guest drivers
+  # or want to use vGPU-Unlock-patcher's merged driver
+  # services.xserver.videoDrivers = [ "nvidia" ];
   
-  hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.vgpu_16_2;
+  hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.vgpu_17_3;
 
   /* ... */
 }
 ```
 
-After that (during the first `nixos-rebuild`), the module will require you to add the GRID .zip archive (it must be `Linux-KVM` one, for example `NVIDIA-GRID-Linux-KVM-535.129.03-537.70.zip`) to the Nix store on the host. **This does not apply to the guest**
-
 ## Configuration
-New options should appear in `hardware.nvidia.vgpu` after you specify the vGPU package
+
+`hardware.nvidia.vgpu` consists of three submodules:
+- `patcher` - driver patching utility
+- `griddUnlock` - patch 18.x to use with `fastapi-dls`
+- `driverSource` - where to get driver from
 
 ### `hardware.nvidia.vgpu.patcher`
-VUP-related options. Please read the repository's [README](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher/blob/535.161/README.md) if you don't know how to use it. Most likely, you will only need to specify `hardware.nvidia.vgpu.patcher.enable = true` and in some cases `hardware.nvidia.vgpu.patcher.copyVGPUProfiles`
+Manages vGPU-Unlock-patcher's options. Please read its [README](https://github.com/VGPU-Community-Drivers/vGPU-Unlock-patcher/blob/535.161/README.md) if you don't know how to use it. Most likely, you will only need to specify `hardware.nvidia.vgpu.patcher.enable = true` and in some cases `hardware.nvidia.vgpu.patcher.copyVGPUProfiles`
 
 > [!NOTE]
 > The target for the vGPU patcher is determined automatically. For a guest, it will always be `grid`. For the host, if `services.xserver.videoDrivers = ["nvidia"];` is specified, it will be `general-merge` (merged), otherwise `vgpu-kvm`.
@@ -84,7 +104,7 @@ VUP-related options. Please read the repository's [README](https://github.com/VG
 - `hardware.nvidia.vgpu.patcher.profileOverrides` (only for host) - custom properties for vGPU profiles
 
 #### Profile overrides
-Replace `*` in the following options with your profile ID (`"333"` in case of `nvidia-333`, also referred to as `GeForce RTX 2070-3`). Multiple overrides can be specified
+Replace `*` in the following options with your profile ID (`"333"` in case of `nvidia-333`). Multiple overrides can be specified
 - `profileOverrides.*.vramAllocation` (integer) - vRAM allocation in megabytes
 - `profileOverrides.*.heads` (integer) - the maximum number of virtual monitors for one VM
 - `profileOverrides.*.enableCuda` (bool)
@@ -106,24 +126,31 @@ hardware.nvidia.vgpu.patcher.profileOverrides = {
 };
 ```
 
+### `hardware.nvidia.vgpu.griddUnlock`
+Integration with [`gridd-unlock-patcher`](https://git.collinwebdesigns.de/oscar.krause/gridd-unlock-patcher), for 18.x guests only
+
+#### Available options
+- `hardware.nvidia.vgpu.griddUnlock.enable` (bool) - enable/disable patch
+- `hardware.nvidia.vgpu.griddUnlock.rootCaFile` (path) - path to `fastapi-dls` instance's root certificate authority. Required when submodule is enabled
+
 ### `hardware.nvidia.vgpu.driverSource`
-Manages the driver source. It can be used, for example, to download the driver from your HTTP(s) server. You can use a .run or GRID .zip file. You can also use a previously patched file. 
+Manages the driver source. It can accept either `Linux-KVM` GRID archive or a plain .run driver file. It can also fetch from Nix store or HTTP(s) server
 
-The module makes some assumptions about what file to retrieve and from where:
-- by default, the host tries to fetch the GRID .zip from the Nix store, the guest fetches the driver online
-- if `sha256` is specified, a .run file is always expected
-- `url = null` will force the driver to be fetched from the Nix store (useful for guests)
-- if `name` ends with the extension `.run`, then the .run file will be expected, the same with .zip (useful for guests)
-
-To calculate `sha256` (not necessary when fetching from url, set it to `""` to find out) you can use `nix-hash`:
-```
-nix-hash --flat --base64 --type sha256 /path/to/file.zip
-```
+> [!NOTE]
+> To calculate `sha256` of local file you can use `nix-hash`:
+> ```
+> nix-hash --flat --base64 --type sha256 /path/to/file.zip
+> ```
+> If file is fetched from URL then it will throw error with correct hash.
 
 #### Available options
 - `hardware.nvidia.vgpu.driverSource.name` (string) - driver filename
+  	- Host will expect a .zip by default, while guest expects a .run. The extension part of this option will force file type
 - `hardware.nvidia.vgpu.driverSource.url` (string)
+  	- Set to `null` to force fetch from Nix store
 - `hardware.nvidia.vgpu.driverSource.sha256` (string)
+  	- If set, then **.run is always expected**. If not, then .zip is expected on host, on guest .run is still expected but that can be overridden by `name`
+  	- If value contradicts with `name` then rebuild will fail
 - `hardware.nvidia.vgpu.driverSource.curlOptsList` (list of strings) - a list of arguments to pass to `curl`
 	- For example, `["-u" "admin:some nice password"]`
 
@@ -145,7 +172,7 @@ The `mkVgpuDriver` and `mkVgpuPatcher` allow you to create your own driver deriv
 - `gridVersion` (string) - vGPU release (for example, 16.7, 17.2...)
 - `zipFilename` (string) - the full name of the GRID .zip file (including extension)
 - `vgpuPatcher` - a patcher derivation obtained from `mkVgpuPatcher` (set to `null` to disable patching)
-- `prePatch`, `postPatch`, `patchFlags`, `patches`, `preInstall`, `postInstall`, `broken` are passed directly to `stdenv.mkDerivation`
+- `prePatch`, `postPatch`, `patchFlags`, `patches`, `preInstall`, `postInstall`, `broken` are passed directly to `stdenv.mkDerivation` and are optional
 
 #### Available attributes for `mkVgpuPatcher`
 > [!IMPORTANT]
