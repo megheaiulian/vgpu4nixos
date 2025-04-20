@@ -22,6 +22,8 @@ let
     else
       pkgs;
 
+  griddUnlock = pinnedPkgs.callPackage ./gridd-unlock-patcher {};
+
   merged = !guest && (lib.elem "nvidia" config.services.xserver.videoDrivers);
   patcherArgs =
     with vgpuCfg.patcher;
@@ -157,7 +159,15 @@ let
           "gridVersion"
           "zipFilename"
           "vgpuPatcher"
-        ]);
+        ])
+        // (lib.optionalAttrs (vgpuCfg.griddUnlock.enable or false) {
+          postPatch = (args.postPatch or "")
+            + ''
+              ${griddUnlock}/bin/gridd-unlock-patcher \
+                -g nvidia-gridd \
+                -c ${vgpuCfg.griddUnlock.rootCaFile}
+            '';
+        });
       src = getDriver {
         inherit (vgpuCfg.driverSource)
           name
@@ -380,35 +390,37 @@ in
           description = "Extra flags to pass to the patcher.";
         };
       };
-      driverSource.name = lib.mkOption {
-        type = lib.types.str;
-        default = "";
-        example = "NVIDIA-GRID-Linux-KVM-535.129.03-537.70.zip";
-        description = "The name of the driver file.";
-      };
-      driverSource.url = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = "";
-        example = "https://drive.google.com/uc?export=download&id=n0TaR34LliNKG3t7h4tYOuR5elF";
-        description = "The address of your local server from which to download the driver, if any.";
-      };
-      driverSource.sha256 = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        example = "sha256-tFgDf7ZSIZRkvImO+9YglrLimGJMZ/fz25gjUT0TfDo=";
-        description = ''
-          SHA256 hash of your driver. Note that anything other than null will automatically require a .run file, not a .zip GRID archive.
-          Set the value to "" to get the correct hash (only when fetching from an HTTP(s) server).
-        '';
-      };
-      driverSource.curlOptsList = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        default = [ ];
-        example = [
-          "-u"
-          "admin:12345678"
-        ];
-        description = "Additional curl options, similar to curlOptsList in pkgs.fetchurl.";
+      driverSource = {
+        name = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+          example = "NVIDIA-GRID-Linux-KVM-535.129.03-537.70.zip";
+          description = "The name of the driver file.";
+        };
+        url = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = "";
+          example = "https://drive.google.com/uc?export=download&id=n0TaR34LliNKG3t7h4tYOuR5elF";
+          description = "The address of your local server from which to download the driver, if any.";
+        };
+        sha256 = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          example = "sha256-tFgDf7ZSIZRkvImO+9YglrLimGJMZ/fz25gjUT0TfDo=";
+          description = ''
+            SHA256 hash of your driver. Note that anything other than null will automatically require a .run file, not a .zip GRID archive.
+            Set the value to "" to get the correct hash (only when fetching from an HTTP(s) server).
+          '';
+        };
+        curlOptsList = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          example = [
+            "-u"
+            "admin:12345678"
+          ];
+          description = "Additional curl options, similar to curlOptsList in pkgs.fetchurl.";
+        };
       };
     };
   };

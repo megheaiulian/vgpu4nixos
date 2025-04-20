@@ -1,0 +1,17 @@
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -5,14 +5,6 @@
+ project(gridd-unlock-patcher CXX)
+ 
+ include(ExternalProject)
+-include(cmake/FetchCPM.cmake)
+-
+-CPMAddPackage(
+-        NAME LIEF_SRC
+-        GITHUB_REPOSITORY lief-project/LIEF
+-        GIT_TAG 0.16.4
+-        DOWNLOAD_ONLY YES
+-)
+ 
+ if (LIEF_SRC_ADDED)
+     set(LIEF_PREFIX       "${CMAKE_CURRENT_BINARY_DIR}/LIEF")

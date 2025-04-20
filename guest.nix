@@ -6,10 +6,34 @@
   ...
 }@args:
 
-with lib;
-
+let
+  vgpuCfg = config.hardware.nvidia.vgpu;
+in
 {
-  config = mkIf (builtins.hasAttr "vgpuPatcher" config.hardware.nvidia.package) {
+  options = {
+    hardware.nvidia.vgpu.griddUnlock = {
+      enable = lib.mkEnableOption "certificate patching using gridd-unlock-patcher";
+      rootCaFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        example = "/home/user/Downloads/root_certificate.pem";
+        description = "Path to root certificate authority of licensing server.";
+      };
+    };
+  };
+  config = lib.mkIf (builtins.hasAttr "vgpuPatcher" config.hardware.nvidia.package) {
+    assertions = [
+      {
+        assertion = (vgpuCfg.griddUnlock.enable -> vgpuCfg.griddUnlock.rootCaFile != null);
+        message = ''
+          `hardware.nvidia.vgpu.griddUnlock.rootCaFile` must be defined when `gridd-unlock-patcher` is enabled
+        '';
+      }
+      {
+        assertion = (lib.versionAtLeast config.hardware.nvidia.package.version "570.124.03");
+        message = "`hardware.nvidia.vgpu.griddUnlock` is supported on 18.x releases only";
+      }
+    ];
     systemd.services.nvidia-gridd = {
       description = "NVIDIA Grid Daemon";
       wants = [
@@ -23,13 +47,13 @@ with lib;
       ];
       wantedBy = [ "multi-user.target" ];
       environment = {
-        LD_LIBRARY_PATH = "${getOutput "out" config.hardware.nvidia.package}/lib";
+        LD_LIBRARY_PATH = "${lib.getOutput "out" config.hardware.nvidia.package}/lib";
       };
       serviceConfig = {
         Type = "forking";
         # make sure /var/lib/nvidia exists, otherwise service will fail
         ExecStartPre = "${pkgs.coreutils}/bin/mkdir -p /var/lib/nvidia";
-        ExecStart = "${getBin config.hardware.nvidia.package}/bin/nvidia-gridd";
+        ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-gridd";
         ExecStopPost = "${pkgs.coreutils}/bin/rm -rf /var/run/nvidia-gridd";
       };
       restartIfChanged = false;
@@ -39,7 +63,7 @@ with lib;
       wantedBy = [ "multi-user.target" ];
       serviceConfig = {
         Type = "forking";
-        ExecStart = "${getBin config.hardware.nvidia.package}/bin/nvidia-topologyd";
+        ExecStart = "${lib.getBin config.hardware.nvidia.package}/bin/nvidia-topologyd";
       };
       restartIfChanged = false;
     };
@@ -50,6 +74,6 @@ with lib;
         config.hardware.nvidia.package + /nvidia-topologyd.conf.template;
     };
     # nvidia modeset MUST be enabled in order to work correctly
-    hardware.nvidia.modesetting.enable = true;
+    hardware.nvidia.modesetting.enable = lib.mkDefault true;
   };
 }
