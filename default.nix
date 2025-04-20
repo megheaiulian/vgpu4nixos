@@ -291,6 +291,19 @@ let
         gridVersion = "17.3";
       };
     };
+    "${pref}_16_10" = mkVgpuDriver {
+      version = "535.247.02";
+      sha256 = "sha256-DI/se2GQG3cwiCvIQUThFXVyGkE2JH9+rps520L+SGQ=";
+      guestVersion = "535.247.01";
+      guestSha256 = "sha256-WJ7faV6XDkaYjC+ElQ+3MpnHbKkR4hzqr5sohqEof+k=";
+      openSha256 = null; # TODO: nvidia-open support
+      generalVersion = "535.216.01"; # HACK: nvidia-settings Github doesn't include 535.247 tag
+      settingsSha256 = "sha256-9PgaYJbP1s7hmKCYmkuLQ58nkTruhFdHAs4W84KQVME=";
+      usePersistenced = false;
+      gridVersion = "16.10";
+      zipFilename = "NVIDIA-GRID-Linux-KVM-535.247.02-535.247.01-539.28.zip";
+      vgpuPatcher = null;
+    };
     "${pref}_16_9" = mkVgpuDriver {
       version = "535.230.02";
       sha256 = "sha256-FMzf35R3o6bXVoAcYXrL3eBEFkQNRh96RnZ/qn5eeWs=";
