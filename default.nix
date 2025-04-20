@@ -228,6 +228,19 @@ let
       zipFilename = "NVIDIA-GRID-Linux-KVM-570.124.03-570.124.06-572.60.zip";
       vgpuPatcher = null;
     };
+    "${pref}_17_6" = mkVgpuDriver {
+      version = "550.163.02";
+      sha256 = "sha256-CFK1IPg9uAyEa5cA0vou47/SvobZ5DK5ap81j/AjCBQ=";
+      guestVersion = "550.163.01";
+      guestSha256 = "sha256-Y+FkfxvlccynuUEtkAvJR3k5xRNX/StpnmvjTHCnOGY=";
+      openSha256 = null; # TODO: nvidia-open support
+      generalVersion = "550.144.03"; # no tag for our version :(
+      settingsSha256 = "sha256-ZopBInC4qaPvTFJFUdlUw4nmn5eRJ1Ti3kgblprEGy4=";
+      usePersistenced = false;
+      gridVersion = "17.6";
+      zipFilename = "NVIDIA-GRID-Linux-KVM-550.163.02-550.163.01-553.74.zip";
+      vgpuPatcher = null;
+    };
     "${pref}_17_5" = mkVgpuDriver {
       version = "550.144.02";
       sha256 = "sha256-VeXJUqF82jp3wEKmCaH5VKQTS9e0gQmwkorf4GBcS8g=";
