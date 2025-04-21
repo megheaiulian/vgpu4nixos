@@ -30,7 +30,7 @@ in
         '';
       }
       {
-        assertion = (lib.versionAtLeast config.hardware.nvidia.package.version "570.124.03");
+        assertion = (vgpuCfg.griddUnlock.enable -> lib.versionAtLeast config.hardware.nvidia.package.version "570.124.03");
         message = "`hardware.nvidia.vgpu.griddUnlock` is supported on 18.x releases only";
       }
     ];
