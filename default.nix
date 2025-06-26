@@ -191,7 +191,7 @@ let
     };
   mkVgpuPatcher =
     args: vgpuDriver:
-    pinnedPkgs.callPackage ./patcher (
+    pinnedPkgs.callPackage ./vgpu-unlock-patcher (
       args
       // {
         inherit vgpuDriver merged;
