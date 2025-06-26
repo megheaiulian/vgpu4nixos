@@ -1,205 +1,25 @@
 {
-  inputs ? { },
-  guest ? false,
+  guest ? false
 }:
 {
   pkgs,
   lib,
   config,
   ...
-}:
+}@args:
 
 let
   vgpuCfg = config.hardware.nvidia.vgpu;
-  pref = if guest then "grid" else "vgpu";
-
-  pinnedPkgs =
-    if inputs ? "nixpkgs" then
-      import inputs.nixpkgs {
-        system = "x86_64-linux";
-        inherit (config.nixpkgs) config;
-      }
-    else
-      pkgs;
-
-  griddUnlock = pinnedPkgs.callPackage ./gridd-unlock-patcher {};
-
   merged = !guest && (lib.elem "nvidia" config.services.xserver.videoDrivers);
-  patcherArgs =
-    with vgpuCfg.patcher;
-    builtins.concatStringsSep " " (
-      lib.optionals (!options.doNotForceGPLLicense) [
-        "--enable-nvidia-gpl-for-experimenting"
-        "--force-nvidia-gpl-I-know-it-is-wrong"
-      ]
-      # TODO: nvidia-open support
-      # ++ lib.optional (!(options.doNotPatchNvidiaOpen or true)) "--nvoss"
-      ++ lib.optional (options.remapP40ProfilesToV100D or false) "--remap-p2v"
-      ++ options.extra
-      ++ [
-        (
-          if merged then
-            "general-merge"
-          else if guest then
-            "grid"
-          else
-            "vgpu-kvm"
-        )
-      ]
-    );
-
-  requireNvidiaFile =
-    { name, ... }@args:
-    pkgs.requireFile (
-      args
-      // rec {
-        url = "https://www.nvidia.com/object/vGPU-software-driver.html";
-        message = ''
-          Unfortunately, we cannot download file ${name} automatically.
-          Please go to ${url} to download it yourself or ask the vGPU Discord community
-          for support (https://discord.com/invite/5rQsSV3Byq). Add it to the Nix store
-          using either
-            nix-store --add-fixed sha256 ${name}
-          or
-            nix-prefetch-url --type sha256 file:///path/to/${name}
-        '';
-      }
-    );
-  getDriver =
-    {
-      name ? "",
-      url ? "",
-      sha256 ? null,
-      zipFilename,
-      zipSha256,
-      guestSha256,
-      version,
-      gridVersion,
-      curlOptsList ? [ ],
-    }@args:
-    let
-      sha256 =
-        if args.sha256 != null then
-          args.sha256
-        else if guest && !(lib.hasSuffix ".zip" args.name) then
-          guestSha256
-        else
-          zipSha256;
-      name =
-        if args.name != "" then
-          args.name
-        else if !guest && sha256 != args.sha256 then
-          zipFilename
-        else
-          "NVIDIA-Linux-x86_64-${version}-${if guest then "grid" else "vgpu-kvm"}.run";
-      url =
-        if args.url != "" then
-          args.url
-        else if guest && args.name == "" && args.sha256 == null then
-          "https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU${gridVersion}/${name}"
-        else
-          null;
-    in
-    lib.throwIf ((lib.hasSuffix ".zip" name) && sha256 != zipSha256)
-      ''
-        The .run file was expected as the source of the NVIDIA vGPU driver due to a overriden hash, got a .zip GRID archive instead
-      ''
-      lib.throwIf
-      ((lib.hasSuffix ".run" name) && sha256 == zipSha256)
-      ''
-        Please specify the correct SHA256 hash of the NVIDIA vGPU driver in `hardware.nvidia.vgpu.driverSource.sha256`
-        (for example with `nix-hash --flat --base64 --type sha256 /path/to/${name}`)
-      ''
-      (
-        if url == null then
-          (requireNvidiaFile { inherit name sha256; })
-        else
-          (pkgs.fetchurl {
-            inherit
-              name
-              url
-              sha256
-              curlOptsList
-              ;
-          })
-      );
-
-  overlayNvidiaPackages =
-    args:
-    (self: super: {
-      linuxKernel = super.linuxKernel // {
-        packagesFor =
-          kernel:
-          (super.linuxKernel.packagesFor kernel).extend (
-            _: super': {
-              nvidiaPackages = super'.nvidiaPackages.extend (_: _: args);
-            }
-          );
-      };
-    });
-
-  mkVgpuDriver =
-    args:
-    let
-      version = if guest then args.guestVersion else args.version;
-      args' =
-        {
-          inherit version;
-          vgpuPatcher = if vgpuCfg.patcher.enable then args.vgpuPatcher else null;
-          settingsVersion = args.generalVersion;
-          persistencedVersion = args.generalVersion;
-        }
-        // (builtins.removeAttrs args [
-          "version"
-          "guestVersion"
-          "sha256"
-          "guestSha256"
-          "openSha256"
-          "generalVersion"
-          "gridVersion"
-          "zipFilename"
-          "vgpuPatcher"
-        ])
-        // (lib.optionalAttrs (vgpuCfg.griddUnlock.enable or false) {
-          postPatch = (args.postPatch or "")
-            + ''
-              ${griddUnlock}/bin/gridd-unlock-patcher \
-                -g nvidia-gridd \
-                -c ${vgpuCfg.griddUnlock.rootCaFile}
-            '';
-        });
-      src = getDriver {
-        inherit (vgpuCfg.driverSource)
-          name
-          url
-          sha256
-          curlOptsList
-          ;
-        inherit (args) guestSha256 gridVersion zipFilename;
-        inherit version;
-        zipSha256 = args.sha256;
-      };
-    in
-    pinnedPkgs.callPackage (import ./nvidia-vgpu args') {
+  
+  utils = pkgs.callPackage ./utils.nix
+    { 
       inherit (config.boot.kernelPackages) kernel;
-      inherit
-        src
-        guest
-        merged
-        patcherArgs
-        ;
+      inherit guest merged vgpuCfg;
     };
-  mkVgpuPatcher =
-    args: vgpuDriver:
-    pinnedPkgs.callPackage ./vgpu-unlock-patcher (
-      args
-      // {
-        inherit vgpuDriver merged;
-        extraVGPUProfiles = vgpuCfg.patcher.copyVGPUProfiles or { };
-        fetchGuests = vgpuCfg.patcher.enablePatcherCmd or false;
-      }
-    );
-  vgpuNixpkgsPkgs = {
+
+  pref = if guest then "grid" else "vgpu";
+  vgpuNixpkgsPkgs = with utils; {
     inherit mkVgpuDriver mkVgpuPatcher;
 
     "${pref}_18_1" = mkVgpuDriver {
@@ -383,7 +203,9 @@ in
 {
   imports = [
     # Load host- or guest-specific options and config
-    (if guest then ./guest.nix else ./host.nix)
+    (import
+      (if guest then ./guest.nix else ./host.nix)
+      args // { inherit utils; })
   ];
   options = {
     hardware.nvidia.vgpu = {
@@ -467,13 +289,28 @@ in
         assertion = (config.hardware.nvidia.package.vgpuPatcher == null -> !vgpuCfg.patcher.enable);
         message = "vGPU-Unlock-patcher is not supported for vGPU version ${config.hardware.nvidia.package.version}";
       }
+      {
+        assertion = (vgpuCfg.driverSource.sha256 == null -> lib.hasSuffix ".zip" (with vgpuCfg.driverSource; if name != "" then name else ".zip"));
+        message = ''
+          NVIDIA vGPU driver hash is not set, but `hardware.nvidia.vgpu.driverSource.name` has an extensions that differs from .zip
+          Declare `hardware.nvidia.vgpu.driverSource.sha256` or change `name` option to have .run extension at the end
+        '';
+      }
+      {
+        assertion = (vgpuCfg.driverSource.sha256 != null -> lib.hasSuffix ".run" (with vgpuCfg.driverSource; if name != "" then name else ".run"));
+        message = ''
+          NVIDIA vGPU driver hash is set, but `hardware.nvidia.vgpu.driverSource.name` has an extensions that differs from .run
+          Remove `hardware.nvidia.vgpu.driverSource.sha256` or change `name` option to have .zip extension at the end
+        '';
+      }
     ];
+
     # Add our packages to nvidiaPackages
     nixpkgs.overlays = [
-      (overlayNvidiaPackages (
+      (utils.overlayNvidiaPackages (
         vgpuNixpkgsPkgs
         // {
-          vgpuNixpkgsOverlay = overlayNvidiaPackages vgpuNixpkgsPkgs;
+          vgpuNixpkgsOverlay = utils.overlayNvidiaPackages vgpuNixpkgsPkgs;
         }
       ))
     ];

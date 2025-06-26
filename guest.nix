@@ -2,9 +2,8 @@
   pkgs,
   lib,
   config,
-  inputs,
   ...
-}@args:
+}:
 
 let
   vgpuCfg = config.hardware.nvidia.vgpu;

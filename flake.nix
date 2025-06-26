@@ -8,7 +8,17 @@
   outputs =
     { self, nixpkgs, ... }@inputs:
     let
-      nixosModule = guest: import ./default.nix { inherit inputs guest; };
+      importPinned = path: args:
+        { config, ... }: import path args
+          {
+            inherit (import nixpkgs
+              {
+                system = "x86_64-linux";
+                config.allowUnfree = true;
+              }) pkgs lib;
+            inherit config inputs;
+          };
+      nixosModule = guest: importPinned ./default.nix { inherit guest; };
     in
     {
       nixosModules = {

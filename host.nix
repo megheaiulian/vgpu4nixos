@@ -3,67 +3,14 @@
   lib,
   config,
   inputs,
+  utils,
   ...
-}@args:
+}:
 
 with lib;
 
 let
   nvidiaCfg = config.hardware.nvidia;
-
-  genXmlstarletCmd =
-    overrides:
-    lib.attrsets.foldlAttrs (
-      s: n: v:
-      s
-      + (lib.attrsets.foldlAttrs (
-        s': n': v':
-        let
-          vFlags =
-            if builtins.isAttrs v' then
-              # yes, three nested loops
-              (lib.attrsets.foldlAttrs (
-                ss: nn: vv:
-                ss + " -u '/vgpuconfig/vgpuType[@id=\"${n}\"]/${n'}/@${nn}' -v ${vv}"
-              ) "" v')
-            else
-              " -u '/vgpuconfig/vgpuType[@id=\"${n}\"]/${n'}/text()' -v ${builtins.toString v'}";
-        in
-        s' + vFlags
-      ) "" v)
-    ) "xmlstarlet ed -P" overrides;
-
-  xmlstarletCmd = genXmlstarletCmd (
-    lib.mapAttrs (
-      _: v:
-      (optionalAttrs (v.vramAllocation != null) (
-        let
-          # a little bit modified version of
-          # https://discord.com/channels/829786927829745685/1162008346551926824/1171897739576086650
-          profSizeDec = 1048576 * v.vramAllocation;
-          fbResDec = 134217728 + ((v.vramAllocation - 1024) * 65536);
-        in
-        {
-          profileSize = "0x${lib.toHexString profSizeDec}";
-          framebuffer = "0x${lib.toHexString (profSizeDec - fbResDec)}";
-          fbReservation = "0x${lib.toHexString fbResDec}";
-        }
-      ))
-      // (optionalAttrs (v.heads != null) { numHeads = (builtins.toString v.heads); })
-      // (optionalAttrs (v.display.width != null && v.display.height != null) {
-        display = {
-          width = (builtins.toString v.display.width);
-          height = (builtins.toString v.display.height);
-        };
-        maxPixels = (builtins.toString (v.display.width * v.display.height));
-      })
-      // (optionalAttrs (v.framerateLimit != null) {
-        frlConfig = "0x${lib.toHexString v.framerateLimit}";
-        frame_rate_limiter = if v.framerateLimit > 0 then "1" else "0";
-      })
-      // v.xmlConfig
-    ) nvidiaCfg.vgpu.patcher.profileOverrides
-  );
 in
 {
   options = {
@@ -197,7 +144,7 @@ in
           if nvidiaCfg.vgpu.patcher.enable && nvidiaCfg.vgpu.patcher.profileOverrides != { } then
             (pkgs.runCommand "vgpuconfig-override" { nativeBuildInputs = [ pkgs.xmlstarlet ]; } ''
               mkdir -p $out
-              ${xmlstarletCmd} ${nvidiaCfg.package + /vgpuConfig.xml} > $out/vgpuConfig.xml
+              ${utils.vgpuXmlCmd} ${nvidiaCfg.package + /vgpuConfig.xml} > $out/vgpuConfig.xml
             '')
           else
             nvidiaCfg.package
