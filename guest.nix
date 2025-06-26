@@ -72,7 +72,13 @@ in
       "nvidia/nvidia-topologyd.conf.template".source =
         config.hardware.nvidia.package + /nvidia-topologyd.conf.template;
     };
-    # nvidia modeset MUST be enabled in order to work correctly
-    hardware.nvidia.modesetting.enable = lib.mkDefault true;
+    hardware.nvidia = {
+      # nvidia modeset MUST be enabled in order to work correctly
+      modesetting.enable = lib.mkDefault true;
+
+      # nixpkgs requires to define these options now, but in our case they are useless
+      open = lib.mkDefault false;
+      gsp.enable = lib.mkDefault false;
+    };
   };
 }
