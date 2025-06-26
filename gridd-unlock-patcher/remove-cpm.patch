@@ -9,7 +9,7 @@
 -CPMAddPackage(
 -        NAME LIEF_SRC
 -        GITHUB_REPOSITORY lief-project/LIEF
--        GIT_TAG 0.16.4
+-        GIT_TAG 0.16.6
 -        DOWNLOAD_ONLY YES
 -)
  

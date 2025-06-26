@@ -7,13 +7,13 @@
 }:
 stdenv.mkDerivation rec {
   pname = "gridd-unlock-patcher";
-  version = "0.2";
+  version = "1.1";
 
   src = fetchFromGitLab {
-    owner = "oscar.krause";
+    owner = "vGPU";
     repo = pname;
-    rev = "010b21ea6fa64a5fcab5421854cfdfbc491b6d89";
-    sha256 = "sha256-qJJT/9NVT1okLOBdbpLJETKMPheZYnEsZ2kDfJcJ2Os=";
+    rev = "16fb0727724d1dd9b1f57e4ac619cdab64e595fb";
+    sha256 = "sha256-kho3DIepg52HF1ktcLadKg3jUsyvVWQr3q3wiAmWHkM=";
     domain = "git.collinwebdesigns.de";
   };
 
