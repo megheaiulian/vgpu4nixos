@@ -231,7 +231,8 @@ in
     # Load host- or guest-specific options and config
     (import
       (if guest then ./guest.nix else ./host.nix)
-      args // { inherit utils; })
+      (args // { inherit utils; })
+    )
   ];
   options = {
     hardware.nvidia.vgpu = {
