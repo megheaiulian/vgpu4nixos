@@ -29,7 +29,7 @@ in
         '';
       }
       {
-        assertion = (lib.versionAtLeast config.hardware.nvidia.package.version "570.124.03");
+        assertion = (vgpuCfg.griddUnlock.enable -> lib.versionAtLeast config.hardware.nvidia.package.version "570.124.03");
         message = "`hardware.nvidia.vgpu.griddUnlock` is supported on 18.x releases only";
       }
     ];
@@ -76,7 +76,7 @@ in
       # nvidia modeset MUST be enabled in order to work correctly
       modesetting.enable = lib.mkDefault true;
 
-      # nixpkgs requires to define these options now, but in our case they are useless
+      # nixpkgs enables them by default for >=560 drivers
       open = lib.mkDefault false;
       gsp.enable = lib.mkDefault false;
     };
