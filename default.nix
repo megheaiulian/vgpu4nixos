@@ -12,10 +12,10 @@ let
   vgpuCfg = config.hardware.nvidia.vgpu;
   merged = !guest && (lib.elem "nvidia" config.services.xserver.videoDrivers);
   
-  utils = pkgs.callPackage ./utils.nix
-    { 
+  utils = import ./utils.nix
+    {
       inherit (config.boot.kernelPackages) kernel;
-      inherit guest merged vgpuCfg;
+      inherit pkgs lib guest merged vgpuCfg;
     };
 
   pref = if guest then "grid" else "vgpu";
