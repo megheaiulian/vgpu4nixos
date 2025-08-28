@@ -3,6 +3,8 @@
   lib,
   version ? "custom",
   rev,
+  owner ? "VGPU-Community-Drivers",
+  repo ? "vGPU-Unlock-patcher",
   sha256,
   vgpuDriver,
   merged ? false,
@@ -55,10 +57,9 @@ pkgs.stdenv.mkDerivation {
   inherit version;
 
   src = pkgs.fetchFromGitHub {
-    owner = "VGPU-Community-Drivers";
-    repo = "vGPU-Unlock-patcher";
     fetchSubmodules = true;
     inherit rev sha256;
+    inherit owner repo rev sha256;
   };
 
   driverSrcs = (
