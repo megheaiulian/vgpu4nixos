@@ -58,7 +58,6 @@ pkgs.stdenv.mkDerivation {
 
   src = pkgs.fetchFromGitHub {
     fetchSubmodules = true;
-    inherit rev sha256;
     inherit owner repo rev sha256;
   };
 
